@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cursor-cli-proxy"
+version = "0.1.0"
+description = "A proxy server providing OpenAI-compatible API interface for Cursor CLI."
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "loguru",
+    "pydantic-settings",
+    "python-dotenv"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx"
+]
