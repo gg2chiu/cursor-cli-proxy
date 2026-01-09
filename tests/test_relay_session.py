@@ -39,7 +39,7 @@ def test_session_flow_branching(mock_exec, mock_check_output):
     
     # 1. New Chat
     req1 = {
-        "model": "gpt-4",
+        "model": "auto",
         "messages": [{"role": "user", "content": "Hi"}]
     }
     resp1 = client.post("/v1/chat/completions", json=req1, headers={"Authorization": "Bearer test"})
@@ -55,7 +55,7 @@ def test_session_flow_branching(mock_exec, mock_check_output):
     mock_process.communicate.return_value = (b'{"result": "Answer2"}', b"")
     
     req2 = {
-        "model": "gpt-4",
+        "model": "auto",
         "messages": [
             {"role": "user", "content": "Hi"},
             {"role": "assistant", "content": "Answer1"},
@@ -75,7 +75,7 @@ def test_session_flow_branching(mock_exec, mock_check_output):
     mock_process.communicate.return_value = (b'{"result": "Answer3"}', b"")
     
     req3 = {
-        "model": "gpt-4",
+        "model": "auto",
         "messages": [
             {"role": "user", "content": "Hello"}, # Changed
             {"role": "assistant", "content": "Answer1"},

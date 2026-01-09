@@ -26,13 +26,10 @@ class ModelRegistry:
     @property
     def default_models(self) -> List[Model]:
         return [
-            Model(id="cursor-small", owned_by="cursor"),
-            Model(id="cursor-large", owned_by="cursor"),
-            Model(id="gpt-3.5-turbo", owned_by="openai"),
-            Model(id="gpt-4", owned_by="openai"),
-            Model(id="gpt-4o", owned_by="openai"),
-            Model(id="claude-3-opus", owned_by="anthropic"),
-            Model(id="claude-3.5-sonnet", owned_by="anthropic"),
+            Model(id="auto", owned_by="cursor"),
+            Model(id="composer-1", owned_by="cursor"),
+            Model(id="gpt-5.1", owned_by="openai"),
+            Model(id="sonnet-4.5", owned_by="anthropic")
         ]
 
     def save_to_file(self, models: List[Model]):
@@ -66,13 +63,13 @@ class ModelRegistry:
         try:
             logger.info("Fetching models from cursor-agent CLI...")
             
-            cmd = [config.CURSOR_BIN, '--model', 'fake']
+            cmd = [config.CURSOR_BIN, '--list-models']
             # Use provided api_key or fall back to config
             key_to_use = api_key or config.CURSOR_KEY
             if key_to_use:
                 cmd.extend(['--api-key', key_to_use])
 
-            # Run the command expecting failure (exit code 1) but capturing stderr
+            # Run the command and capture stdout
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -80,15 +77,11 @@ class ModelRegistry:
                 check=False 
             )
             
-            # Even if returncode is not 0, we expect useful info in stderr
-            stderr_output = result.stderr
+            # The --list-models command outputs to stdout
+            stdout_output = result.stdout
             
-            models = self._parse_models(stderr_output)
-            # Save to file if we got valid models (and not just fallback defaults from parsing error)
-            # _parse_models returns default_models on failure. 
-            # We should check if the result is different or just trust the process.
-            # But simpler: just save whatever we got, as _parse_models handles fallback.
-            # Actually, if _parse_models returns defaults, saving them is fine too.
+            models = self._parse_models(stdout_output)
+            # Save to file if we got valid models
             self.save_to_file(models)
             return models
             
@@ -99,26 +92,61 @@ class ModelRegistry:
             logger.error(f"Error fetching models: {e}. Using fallback model list.")
             return self.default_models
 
-    def _parse_models(self, stderr_output: str) -> List[Model]:
-        """Parse the stderr output to extract model names."""
-        # Expected format: "Cannot use this model: fake. Available models: model1, model2, ..."
-        match = re.search(r"Available models:\s*(.*)", stderr_output, re.DOTALL)
+    def _parse_models(self, output: str) -> List[Model]:
+        """Parse the --list-models output to extract model information.
         
-        if not match:
-            logger.warning("Could not parse model list from CLI output. Using fallback.")
-            logger.debug(f"CLI Output: {stderr_output}")
-            return self.default_models
-            
-        model_str = match.group(1).strip()
-        # Split by comma and strip whitespace
-        model_ids = [m.strip() for m in model_str.split(',') if m.strip()]
+        Expected format:
+        Available models
         
-        if not model_ids:
-            logger.warning("Parsed empty model list. Using fallback.")
+        model-id - Model Name (optional tags)
+        model-id2 - Model Name 2
+        ...
+        """
+        if not output:
+            logger.warning("Empty output from CLI. Using fallback.")
             return self.default_models
+        
+        models = []
+        lines = output.strip().split('\n')
+        
+        # Skip header lines and empty lines
+        parsing = False
+        for line in lines:
+            line = line.strip()
             
-        logger.info(f"Successfully parsed {len(model_ids)} models from CLI.")
-        return [Model(id=mid, owned_by="cursor") for mid in model_ids]
+            # Start parsing after "Available models" header
+            if "Available models" in line:
+                parsing = True
+                continue
+            
+            # Skip empty lines and tip lines
+            if not line or line.startswith("Tip:") or line.startswith("Loading"):
+                continue
+            
+            # Skip ANSI escape sequences lines
+            if line.startswith('[') and ('K' in line or 'G' in line or 'A' in line):
+                continue
+            
+            if parsing:
+                # Parse line format: "model-id - Model Name (optional)"
+                match = re.match(r'^([a-zA-Z0-9._-]+)\s+-\s+(.+)$', line)
+                if match:
+                    model_id = match.group(1)
+                    model_name = match.group(2).strip()
+                    # Remove only trailing status tags like (default), (current)
+                    # but keep model name parts like (Thinking)
+                    model_name = re.sub(r'\s+\((default|current)\)$', '', model_name).strip()
+                    models.append(Model(id=model_id, owned_by="cursor", name=model_name))
+                else:
+                    logger.debug(f"Skipping unparseable line: {line}")
+        
+        if not models:
+            logger.warning("Could not parse any models from CLI output. Using fallback.")
+            logger.debug(f"CLI Output: {output}")
+            return self.default_models
+        
+        logger.info(f"Successfully parsed {len(models)} models from CLI.")
+        return models
 
     def initialize(self, update: bool = False):
         """Initialize the registry.

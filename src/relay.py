@@ -30,6 +30,7 @@ class CommandBuilder:
             "--model", self.model,
             "--api-key", self.api_key,
             "--sandbox", "enabled",
+            "--approve-mcps", "true",
             "-p",
         ]
         

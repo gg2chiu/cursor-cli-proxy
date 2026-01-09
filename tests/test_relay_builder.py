@@ -4,11 +4,11 @@ from src.relay import CommandBuilder
 
 def test_build_command_basic():
     messages = [Message(role="user", content="hello")]
-    builder = CommandBuilder(model="gpt-4", api_key="sk-test", messages=messages)
+    builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
     cmd = builder.build()
     
     assert "--model" in cmd
-    assert "gpt-4" in cmd
+    assert "auto" in cmd
     assert "--api-key" in cmd
     assert "sk-test" in cmd
     assert "--sandbox" in cmd
@@ -18,7 +18,7 @@ def test_build_command_basic():
 
 def test_build_command_with_workspace():
     messages = [Message(role="user", content="hello")]
-    builder = CommandBuilder(model="gpt-4", api_key="sk-test", messages=messages, workspace_dir="/tmp/ws")
+    builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages, workspace_dir="/tmp/ws")
     cmd = builder.build()
     
     assert "--workspace" in cmd
@@ -31,7 +31,7 @@ def test_system_message_merge():
         Message(role="system", content="You are a helper."),
         Message(role="user", content="Hi")
     ]
-    builder = CommandBuilder(model="gpt-4", api_key="sk-test", messages=messages)
+    builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
     cmd = builder.build()
     
     # 預期 System message 被合併到 User message

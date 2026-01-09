@@ -9,21 +9,30 @@ def registry():
 
 def test_fetch_models_success(registry):
     """測試成功解析 CLI 輸出"""
-    mock_stderr = "Cannot use this model: fake. Available models: model-a, model-b, model-c"
+    mock_stdout = """Available models
+
+model-a - Model A
+model-b - Model B (default)
+model-c - Model C
+
+Tip: use --model <id> to switch."""
     
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
-            returncode=1, 
-            stderr=mock_stderr,
-            stdout=""
+            returncode=0, 
+            stderr="",
+            stdout=mock_stdout
         )
         
         models = registry.fetch_models()
         
         assert len(models) == 3
         assert models[0].id == "model-a"
+        assert models[0].name == "Model A"
         assert models[1].id == "model-b"
+        assert models[1].name == "Model B"
         assert models[2].id == "model-c"
+        assert models[2].name == "Model C"
         assert models[0].owned_by == "cursor"
 
 def test_fetch_models_cli_error(registry):
@@ -34,17 +43,17 @@ def test_fetch_models_cli_error(registry):
         # Should fallback to default list
         assert len(models) > 0
         ids = [m.id for m in models]
-        assert "gpt-4" in ids
+        assert "auto" in ids
 
 def test_fetch_models_malformed_output(registry):
     """測試無法解析的輸出 (fallback)"""
-    mock_stderr = "Some unexpected error message without model list."
+    mock_stdout = "Some unexpected error message without model list."
     
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
             returncode=1, 
-            stderr=mock_stderr,
-            stdout=""
+            stderr="",
+            stdout=mock_stdout
         )
         
         models = registry.fetch_models()
@@ -52,17 +61,19 @@ def test_fetch_models_malformed_output(registry):
         # Should fallback to default list
         assert len(models) > 0
         ids = [m.id for m in models]
-        assert "gpt-4" in ids
+        assert "auto" in ids
 
 def test_fetch_models_with_api_key(registry):
     """測試 fetch_models 是否正確傳遞 --api-key"""
-    mock_stderr = "Cannot use this model: fake. Available models: model-k"
+    mock_stdout = """Available models
+
+model-k - Model K"""
     
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
-            returncode=1, 
-            stderr=mock_stderr,
-            stdout=""
+            returncode=0, 
+            stderr="",
+            stdout=mock_stdout
         )
         
         registry.fetch_models(api_key="test-key-123")
@@ -75,12 +86,15 @@ def test_fetch_models_with_api_key(registry):
 
 def test_caching_mechanism(registry):
     """測試快取機制"""
-    mock_stderr = "Cannot use this model: fake. Available models: cached-model"
+    mock_stdout = """Available models
+
+cached-model - Cached Model"""
     
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
-            returncode=1, 
-            stderr=mock_stderr
+            returncode=0, 
+            stderr="",
+            stdout=mock_stdout
         )
         
         # Explicitly trigger update to fetch from CLI and populate cache/file

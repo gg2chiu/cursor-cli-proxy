@@ -19,7 +19,7 @@ def test_list_models_dynamic():
     # We need to patch where main.py imports or uses the registry
     # Since main.py likely imports 'model_registry' instance, we patch the instance method
     with patch.object(model_registry, 'get_models', return_value=mock_models) as mock_get:
-        response = client.get("/v1/models")
+        response = client.get("/v1/models", headers={"Authorization": "Bearer sk-test"})
         
         assert response.status_code == 200
         # Verify that get_models was called with an api_key (from verify_auth)
@@ -41,11 +41,11 @@ def test_list_models_fallback_integration():
     # Patch subprocess to fail, triggering fallback
     with patch("subprocess.run", side_effect=FileNotFoundError):
         # This will trigger fetch_models() internally
-        response = client.get("/v1/models")
+        response = client.get("/v1/models", headers={"Authorization": "Bearer sk-test"})
         
         assert response.status_code == 200
         data = response.json()
         
-        # Should contain default models (e.g., gpt-4)
+        # Should contain default models (e.g., auto)
         ids = [m["id"] for m in data["data"]]
-        assert "gpt-4" in ids
+        assert "auto" in ids

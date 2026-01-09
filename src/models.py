@@ -52,6 +52,7 @@ class Model(BaseModel):
     object: str = "model"
     created: int = Field(default_factory=lambda: int(time.time()))
     owned_by: str = "cursor"
+    name: Optional[str] = None
 
 class ModelList(BaseModel):
     object: str = "list"

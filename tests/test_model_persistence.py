@@ -11,13 +11,15 @@ def registry():
 
 def test_save_models_creates_file(registry):
     """Verify that models are saved to models.json."""
-    mock_stderr = "Cannot use this model: fake. Available models: persistence-test-model"
+    mock_stdout = """Available models
+
+persistence-test-model - Persistence Test Model"""
     
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
-            returncode=1, 
-            stderr=mock_stderr,
-            stdout=""
+            returncode=0, 
+            stderr="",
+            stdout=mock_stdout
         )
         
         # Trigger fetch and save
@@ -31,6 +33,7 @@ def test_save_models_creates_file(registry):
             data = json.load(f)
             assert len(data) == 1
             assert data[0]["id"] == "persistence-test-model"
+            assert data[0]["name"] == "Persistence Test Model"
 
 def test_load_models_from_file(registry):
     """Verify that models are loaded from models.json."""
@@ -64,4 +67,4 @@ def test_corrupt_file_handling(registry):
     # Should fallback to default models
     models = registry.get_models()
     assert len(models) > 0
-    assert "gpt-4" in [m.id for m in models]
+    assert "auto" in [m.id for m in models]

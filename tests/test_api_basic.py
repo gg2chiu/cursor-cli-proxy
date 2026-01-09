@@ -13,7 +13,7 @@ def test_chat_completions_basic():
         response = client.post(
             "/v1/chat/completions",
             json={
-                "model": "gpt-4",
+                "model": "auto",
                 "messages": [{"role": "user", "content": "hi"}]
             },
             headers={"Authorization": "Bearer sk-test"}
@@ -22,13 +22,13 @@ def test_chat_completions_basic():
         assert response.status_code == 200
         data = response.json()
         assert data["choices"][0]["message"]["content"] == "Hello world"
-        assert data["model"] == "gpt-4"
+        assert data["model"] == "auto"
 
 def test_chat_completions_missing_auth():
     # Force CURSOR_KEY to be None so that auth is actually checked
     with patch.object(config, 'CURSOR_KEY', None):
         response = client.post(
             "/v1/chat/completions",
-            json={"model": "gpt-4", "messages": [{"role": "user", "content": "hi"}]}
+            json={"model": "auto", "messages": [{"role": "user", "content": "hi"}]}
         )
         assert response.status_code == 401

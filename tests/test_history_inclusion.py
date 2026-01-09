@@ -36,7 +36,7 @@ def test_new_session_includes_full_history(mock_exec, mock_check_output):
     
     # Provide a request with history that we haven't seen before
     req = {
-        "model": "gpt-4",
+        "model": "auto",
         "messages": [
             {"role": "system", "content": "You are a helpful assistant."}, 
             {"role": "user", "content": "Question 1"},
@@ -83,7 +83,7 @@ def test_resume_session_includes_only_last_message(mock_exec, mock_check_output)
     
     # Initial request to set up session
     client.post("/v1/chat/completions", json= {
-        "model": "gpt-4",
+        "model": "auto",
         "messages": history_messages
     }, headers={"Authorization": "Bearer test"})
     
@@ -94,7 +94,7 @@ def test_resume_session_includes_only_last_message(mock_exec, mock_check_output)
     # The history hash should match the one we just updated
     # After first response, hash is calculated from: [Sys, Q1, Response 1]
     req2 = {
-        "model": "gpt-4",
+        "model": "auto",
         "messages": [
             {"role": "system", "content": "Sys"},
             {"role": "user", "content": "Q1"},
