@@ -51,27 +51,55 @@ class CommandBuilder:
 class Executor:
     """負責執行 CLI 指令"""
     
-    async def run_non_stream(self, cmd: List[str], cwd: Optional[str] = None) -> str:
-        """執行指令並等待完成，回傳 stdout"""
+    async def run_non_stream(self, cmd: List[str], cwd: Optional[str] = None, timeout: float = 300) -> str:
+        """執行指令，監控 stdout，收到有效 JSON 結果後立即返回"""
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            cwd=cwd
+            cwd=cwd,
+            limit=1024 * 1024 * 10,  # 10MB
         )
         
-        stdout, stderr = await process.communicate()
+        stdout_buffer = b""
         
-        if process.returncode != 0:
-            error_msg = stderr.decode().strip()
-            raise RuntimeError(f"CLI execution failed (code {process.returncode}): {error_msg}")
-            
+        async def read_until_json():
+            nonlocal stdout_buffer
+            # 逐塊讀取 stdout
+            while True:
+                chunk = await process.stdout.read(4096)
+                if not chunk:
+                    # stdout 關閉了
+                    break
+                stdout_buffer += chunk
+                
+                # 嘗試解析 JSON - 如果成功，表示輸出完成
+                try:
+                    data = json.loads(stdout_buffer.decode())
+                    # 成功解析 JSON，可以立即返回
+                    logger.debug("Received valid JSON output, returning immediately")
+                    return data.get("result", "")
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    # JSON 還不完整或 UTF-8 字符被截斷，繼續讀取
+                    continue
+            # 如果沒有收到有效 JSON，返回原始輸出
+            return stdout_buffer.decode(errors='replace').strip()
+        
         try:
-            data = json.loads(stdout.decode())
-            return data.get("result", "")
-        except json.JSONDecodeError:
-            # Fallback to raw stdout if not JSON
-            return stdout.decode().strip()
+            result = await asyncio.wait_for(read_until_json(), timeout=timeout)
+            return result
+        except asyncio.TimeoutError:
+            logger.warning(f"Process timed out after {timeout}s, terminating...")
+            raise RuntimeError(f"CLI execution timed out after {timeout}s")
+        finally:
+            # 清理：如果進程還在跑，終止它
+            if process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
 
     async def run_stream(self, cmd: List[str], cwd: Optional[str] = None):
         """執行指令並串流回傳 stdout"""
@@ -82,7 +110,8 @@ class Executor:
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            cwd=cwd
+            cwd=cwd,
+            limit=1024 * 1024 * 1, # 1MB
         )
         
         seen_content = {}  # Track seen content by message index to detect duplicates

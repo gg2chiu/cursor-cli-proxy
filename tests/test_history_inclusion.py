@@ -30,7 +30,7 @@ def test_new_session_includes_full_history(mock_exec, mock_check_output):
     
     # Mock executor (relay)
     mock_process = AsyncMock()
-    mock_process.communicate.return_value = (b'{"result": "History Received"}', b"")
+    mock_process.stdout.read = AsyncMock(side_effect=[b'{"result": "History Received"}', b""])
     mock_process.returncode = 0
     mock_exec.return_value = mock_process
     
@@ -72,7 +72,7 @@ def test_resume_session_includes_only_last_message(mock_exec, mock_check_output)
     # 1. Create a session first
     mock_check_output.return_value = "existing-session-id\n"
     mock_process = AsyncMock()
-    mock_process.communicate.return_value = (b'{"result": "Response 1"}', b"")
+    mock_process.stdout.read = AsyncMock(side_effect=[b'{"result": "Response 1"}', b""])
     mock_process.returncode = 0
     mock_exec.return_value = mock_process
     
@@ -89,6 +89,12 @@ def test_resume_session_includes_only_last_message(mock_exec, mock_check_output)
     
     # Reset mocks for the actual test turn
     mock_exec.reset_mock()
+    
+    # Set up the mock for the second call
+    mock_process2 = AsyncMock()
+    mock_process2.stdout.read = AsyncMock(side_effect=[b'{"result": "Response 2"}', b""])
+    mock_process2.returncode = 0
+    mock_exec.return_value = mock_process2
     
     # 2. Continue the session
     # The history hash should match the one we just updated
