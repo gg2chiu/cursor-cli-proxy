@@ -2,6 +2,7 @@ import pytest
 from src.models import Message
 from src.relay import CommandBuilder
 
+
 def test_build_command_basic():
     messages = [Message(role="user", content="hello")]
     builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
@@ -13,8 +14,8 @@ def test_build_command_basic():
     assert "sk-test" in cmd
     assert "--sandbox" in cmd
     assert "enabled" in cmd
-    assert "-p" in cmd
-    assert "User: hello" in cmd[-1]
+    assert "--print" in cmd
+    assert "hello" in cmd[-1]
 
 def test_build_command_with_workspace():
     messages = [Message(role="user", content="hello")]
@@ -35,7 +36,7 @@ def test_system_message_merge():
     cmd = builder.build()
     
     # 預期 System message 被合併到 User message
-    # e.g. "System: You are a helper.\nUser: Hi"
+    # e.g. "You are a helper.\n\nHi"
     # Prompt 現在在最後一個元素
     prompt = cmd[-1]
     assert "You are a helper." in prompt
