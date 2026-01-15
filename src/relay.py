@@ -133,6 +133,7 @@ class CommandBuilder:
             "--api-key", self.api_key,
             "--sandbox", "enabled",
             "--approve-mcps",
+            "--force", # "approve-mcps" has a bug. We still need the "force" option to run the MCP tools.
             "--print",
         ]
         
@@ -152,6 +153,94 @@ class CommandBuilder:
 
 class Executor:
     """負責執行 CLI 指令"""
+    
+    def _format_tool_call_start(self, tool_call: dict, tool_count: int) -> Optional[str]:
+        """Format tool call start information for output"""
+        logger.debug(f"Tool call: {tool_call}")
+        # Handle writeToolCall
+        if "writeToolCall" in tool_call:
+            args = tool_call["writeToolCall"].get("args", {})
+            path = args.get("path", "unknown")
+            return f"🖊️ Tool #{tool_count}: Creating {path}\n "
+        
+        # Handle readToolCall
+        elif "readToolCall" in tool_call:
+            args = tool_call["readToolCall"].get("args", {})
+            path = args.get("path", "unknown")
+            return f"📖 Tool #{tool_count}: Reading {path}\n "
+        
+        # Handle mcpToolCall
+        elif "mcpToolCall" in tool_call:
+            mcp_args = tool_call["mcpToolCall"].get("args", {})
+            tool_name = mcp_args.get("name", "unknown")
+            provider = mcp_args.get("providerIdentifier", "unknown")
+            return f"🔌 Tool #{tool_count}: MCP {provider}-{tool_name}\n "
+        
+        # Handle other/unknown tool calls
+        else:
+            # Process any tool call by using the first key
+            if tool_call:
+                key = next(iter(tool_call.keys()))
+                args = tool_call[key].get("args", {})
+                return f"🔨 Tool #{tool_count}: {key} \n "
+        
+        return None
+    
+    def _format_tool_call_result(self, tool_call: dict, tool_number: Optional[int] = None) -> Optional[str]:
+        """Format tool call result information for output"""
+        tool_prefix = f"Tool #{tool_number}: " if tool_number else ""
+        
+        # Handle writeToolCall result
+        if "writeToolCall" in tool_call:
+            result = tool_call["writeToolCall"].get("result", {})
+            if "success" in result:
+                success = result["success"]
+                lines = success.get("linesCreated", 0)
+                size = success.get("fileSize", 0)
+                return f"🖊️ {tool_prefix}Created {lines} lines ({size} bytes)\n "
+            elif "error" in result:
+                error_msg = result["error"].get("message", "Unknown error")
+                return f"🖊️ {tool_prefix}Error: {error_msg}\n "
+        
+        # Handle readToolCall result
+        elif "readToolCall" in tool_call:
+            result = tool_call["readToolCall"].get("result", {})
+            if "success" in result:
+                success = result["success"]
+                total_lines = success.get("totalLines", 0)
+                return f"📖 {tool_prefix}Read {total_lines} lines\n "
+            elif "error" in result:
+                error_msg = result["error"].get("message", "Unknown error")
+                return f"📖 {tool_prefix}Error: {error_msg}\n "
+        
+        # Handle mcpToolCall result
+        elif "mcpToolCall" in tool_call:
+            result = tool_call["mcpToolCall"].get("result", {})
+            if "rejected" in result:
+                reason = result["rejected"].get("reason", "Unknown reason")
+                return f"🔌 {tool_prefix}Rejected: {reason}\n "
+            elif "success" in result:
+                return f"🔌 {tool_prefix}Completed\n "
+            elif "error" in result:
+                error_msg = result.get("error", {}).get("message", "Unknown error")
+                return f"🔌 {tool_prefix}Error: {error_msg}\n "
+        
+        # Handle other/unknown tool calls
+        else:
+            # Process any tool call by using the first key
+            if tool_call:
+                key = next(iter(tool_call.keys()))
+                result = tool_call[key].get("result", {})
+                if "rejected" in result:
+                    reason = result["rejected"].get("reason", "Unknown reason")
+                    return f"🔨 {tool_prefix}Rejected: {reason}\n "
+                elif "success" in result:
+                    return f"🔨 {tool_prefix}Completed\n "
+                elif "error" in result:
+                    error_msg = result["error"].get("message", "Unknown error")
+                    return f"🔨 {tool_prefix}Error: {error_msg}\n "
+        
+        return None
     
     async def run_non_stream(self, cmd: List[str], cwd: Optional[str] = None, timeout: float = 300) -> str:
         """執行指令，監控 stdout，收到有效 JSON 結果後立即返回"""
@@ -216,9 +305,10 @@ class Executor:
             limit=1024 * 1024 * 1, # 1MB
         )
         
-        seen_content = {}  # Track seen content by message index to detect duplicates
         line_count = 0
-        message_count = 0
+        tool_count = 0
+        call_id_to_tool_number = {}  # Track call_id -> tool_number mapping
+        last_full_text = ""
         
         async for line in process.stdout:
             line_str = line.decode().strip()
@@ -232,7 +322,8 @@ class Executor:
                 logger.debug(f"[Stream Line {line_count}] Received JSON type: {data.get('type')}")
                 
                 # 只處理 assistant 類型的 delta
-                if data.get("type") == "assistant":
+                event_type = data.get("type")
+                if event_type == "assistant":
                     if "timestamp_ms" in data:
                         content_list = data.get("message", {}).get("content", [])
                         logger.debug(f"[Stream Line {line_count}] Content list has {len(content_list)} items")
@@ -245,29 +336,68 @@ class Executor:
                                 full_text += text
                                 logger.debug(f"[Stream Line {line_count}] Item {idx}: text length = {len(text)}")
                         
-                        # Create a unique key for this message content
-                        content_key = full_text
-                        
-                        # Check if we've seen this exact content before
-                        if content_key and content_key not in seen_content:
-                            message_count += 1
-                            seen_content[content_key] = message_count
-                            logger.debug(f"[Stream Line {line_count}] New message #{message_count}, yielding {len(full_text)} bytes")
-                            yield full_text
+                        if not full_text:
+                            continue
+
+                        if full_text == last_full_text:
+                            logger.debug(f"[Stream Line {line_count}] Duplicate content detected, skipping")
+                            continue
+
+                        if full_text.startswith(last_full_text):
+                            delta = full_text[len(last_full_text):]
+                            if delta:
+                                logger.debug(f"[Stream Line {line_count}] Yielding delta {len(delta)} bytes")
+                                yield delta
                         else:
-                            logger.debug(f"[Stream Line {line_count}] Duplicate content detected, skipping (seen as message #{seen_content.get(content_key, 'unknown')})")
+                            # Content reset or out-of-order; yield full chunk
+                            logger.debug(f"[Stream Line {line_count}] Content reset detected, yielding {len(full_text)} bytes")
+                            yield full_text
+
+                        last_full_text = full_text
                     else:
                         # 收到沒有 timestamp 的訊息，視為結尾，停止串流
                         logger.debug(f"[Stream Line {line_count}] Received assistant message without timestamp, ending stream")
                         break
+                elif event_type == "system":
+                    subtype = data.get("subtype")
+                    if subtype == "init":
+                        model = data.get("model", "unknown")
+                        logger.debug(f"[Stream Line {line_count}] System init, model={model}")
+                    else:
+                        logger.debug(f"[Stream Line {line_count}] System event subtype={subtype}")
+                elif event_type == "tool_call":
+                    subtype = data.get("subtype")
+                    call_id = data.get("call_id")
+                    tool_call = data.get("tool_call", {})
+                    logger.debug(f"[Stream Line {line_count}] Tool call event subtype={subtype}, call_id={call_id}, keys={list(tool_call.keys())}")
+                    
+                    # Format and yield tool call information
+                    if subtype == "started":
+                        tool_count += 1
+                        # Remember the mapping from call_id to tool_number
+                        if call_id:
+                            call_id_to_tool_number[call_id] = tool_count
+                        tool_info = self._format_tool_call_start(tool_call, tool_count)
+                        if tool_info:
+                            yield tool_info
+                    elif subtype == "completed":
+                        # Look up the tool_number for this call_id
+                        tool_number = call_id_to_tool_number.get(call_id) if call_id else None
+                        tool_result = self._format_tool_call_result(tool_call, tool_number)
+                        if tool_result:
+                            yield tool_result
+                elif event_type == "result":
+                    duration_ms = data.get("duration_ms")
+                    logger.debug(f"[Stream Line {line_count}] Result event duration_ms={duration_ms}, ending stream")
+                    break
                 else:
-                    logger.debug(f"[Stream Line {line_count}] Skipping non-assistant message")
+                    logger.debug(f"[Stream Line {line_count}] Skipping unknown message type={event_type}")
             except json.JSONDecodeError as e:
                 # 如果不是 JSON，可能是舊版本的輸出或錯誤訊息
                 logger.warning(f"[Stream Line {line_count}] Failed to decode JSON: {e}, line: {line_str[:100]}")
                 yield line_str
             
-        logger.debug(f"Stream finished after {line_count} lines, yielded {message_count} unique messages")
+        logger.debug(f"Stream finished after {line_count} lines")
         await process.wait()
         
         if process.returncode != 0:
