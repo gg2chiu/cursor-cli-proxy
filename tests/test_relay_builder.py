@@ -37,7 +37,8 @@ def test_system_message_merge():
     
     # 預期 System message 被合併到 User message
     # e.g. "You are a helper.\n\nHi"
-    # Prompt 現在在最後一個元素
+    # There is no 'SYSTEM:', 'USER:', prefix in the prompt
     prompt = cmd[-1]
-    assert "You are a helper." in prompt
-    assert "Hi" in prompt
+    assert prompt == "You are a helper.\n\nHi"
+    assert "SYSTEM:" not in prompt
+    assert "USER:" not in prompt

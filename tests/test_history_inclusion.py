@@ -57,10 +57,10 @@ def test_new_session_includes_full_history(mock_exec, mock_check_output):
     # Find the prompt in the command list (it's the last element)
     prompt = cmd[-1]
     
-    assert "You are a helpful assistant." in prompt
-    assert "Question 1" in prompt
-    assert "Answer 1" in prompt
-    assert "Question 2" in prompt
+    assert "SYSTEM: You are a helpful assistant." in prompt
+    assert "USER: Question 1" in prompt
+    assert "ASSISTANT: Answer 1" in prompt
+    assert "USER: Question 2" in prompt
     
     # Verify it also has --resume with the new session ID
     assert "--resume" in cmd
@@ -117,6 +117,7 @@ def test_resume_session_includes_only_last_message(mock_exec, mock_check_output)
     prompt = cmd[-1]
     
     assert "Q2" in prompt
+    assert "USER:" not in prompt
     assert "Sys" not in prompt
     assert "Q1" not in prompt
     assert "Response 1" not in prompt

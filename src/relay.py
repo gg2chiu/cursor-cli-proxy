@@ -103,6 +103,7 @@ class CommandBuilder:
     def _merge_messages(self) -> str:
         """合併所有對話內容成一個 Prompt，並展開 slash 指令"""
         merged = []
+        has_assistant = any(msg.role == "assistant" for msg in self.messages)
         for idx, msg in enumerate(self.messages):
             content = msg.content
             logger.debug(f"Message [{idx}] role={msg.role}, content_length={len(content)}, preview={content[:100]}")
@@ -114,6 +115,9 @@ class CommandBuilder:
                     logger.info(f"Message [{idx}] slash command expanded: {len(content)} -> {len(expanded)} chars")
                 content = expanded
             
+            if has_assistant:
+                content = f"{msg.role.upper()}: {content}"
+
             merged.append(content)
         
         result = "\n\n".join(merged)
