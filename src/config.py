@@ -4,9 +4,9 @@ from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from loguru import logger
 
-# Configure logging to output JSON to stdout
+# Configure logging to output text to stdout
 logger.remove()
-logger.add(sys.stdout, format="{message}", serialize=True)
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class Settings(BaseSettings):
     CURSOR_BIN: str = "cursor-agent"
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
         self.validate_cursor_bin()
         # 更新 Log Level
         logger.remove()
-        logger.add(sys.stdout, format="{message}", serialize=True, level=self.LOG_LEVEL.upper())
+        logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}", level=self.LOG_LEVEL.upper())
 
 # 建立全域 config 物件
 config = Settings()

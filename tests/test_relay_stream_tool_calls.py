@@ -23,8 +23,8 @@ async def test_run_stream_mcp_tool_call_rejected():
         b'{"type":"tool_call","subtype":"completed","call_id":"toolu_test_002","tool_call":{"mcpToolCall":{"result":{"rejected":{"reason":"MCP tool execution rejected by user: bitbucket_R1-get_diff ","isReadonly":false}}}},"model_call_id":"model-call-001","session_id":"test-session-123","timestamp_ms":1768455555382}\n',
         # Assistant response after tool calls were rejected
         b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"User rejected"}]},"session_id":"test-session-123","timestamp_ms":1768455560000}\n',
-        b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"User rejected tool"}]},"session_id":"test-session-123","timestamp_ms":1768455560100}\n',
-        b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"User rejected tool access."}]},"session_id":"test-session-123","timestamp_ms":1768455560200}\n',
+        b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":" tool"}]},"session_id":"test-session-123","timestamp_ms":1768455560100}\n',
+        b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":" access."}]},"session_id":"test-session-123","timestamp_ms":1768455560200}\n',
         # Final result
         b'{"type":"result","subtype":"success","duration_ms":9921,"duration_api_ms":9921,"is_error":false,"result":"User rejected tool access.","session_id":"test-session-123","request_id":"test-request-001"}\n'
     ]
@@ -38,13 +38,18 @@ async def test_run_stream_mcp_tool_call_rejected():
         
         # Tool call events should now output formatted info, followed by assistant messages
         expected = [
+            "\n",
+            "\n",
+            "\n",
             "🔌 Tool #1: MCP bitbucket_R1-bitbucket_R1-get_pull_request\n ",
             "🔌 Tool #1: Rejected: MCP tool execution rejected by user: bitbucket_R1-get_pull_request \n ",
             "🔌 Tool #2: MCP bitbucket_R1-bitbucket_R1-get_diff\n ",
             "🔌 Tool #2: Rejected: MCP tool execution rejected by user: bitbucket_R1-get_diff \n ",
+            "\n",
             "User rejected",
             " tool",
-            " access."
+            " access.",
+            "\n"
         ]
         assert chunks == expected
 
@@ -76,11 +81,15 @@ async def test_run_stream_read_write_tool_calls():
             chunks.append(chunk)
         
         expected = [
+            "\n",
+            "\n",
             "📖 Tool #1: Reading src/main.py\n ",
             "📖 Tool #1: Read 223 lines\n ",
             "🖊️ Tool #2: Creating test.txt\n ",
             "🖊️ Tool #2: Created 10 lines (256 bytes)\n ",
-            "Done!"
+            "\n",
+            "Done!",
+            "\n"
         ]
         assert chunks == expected
 
@@ -112,11 +121,15 @@ async def test_run_stream_tool_call_errors():
             chunks.append(chunk)
         
         expected = [
+            "\n",
+            "\n",
             "📖 Tool #1: Reading nonexistent.txt\n ",
             "📖 Tool #1: Error: File not found\n ",
             "🖊️ Tool #2: Creating /root/test.txt\n ",
             "🖊️ Tool #2: Error: Permission denied\n ",
-            "Encountered errors"
+            "\n",
+            "Encountered errors",
+            "\n"
         ]
         assert chunks == expected
 
@@ -151,13 +164,17 @@ async def test_run_stream_generic_tool_calls():
             chunks.append(chunk)
         
         expected = [
+            "\n",
+            "\n",
             '🔨 Tool #1: executeToolCall \n ',
             "🔨 Tool #1: Completed\n ",
             '🔨 Tool #2: analyzeToolCall \n ',
             "🔨 Tool #2: Error: Analysis failed\n ",
             '🔨 Tool #3: customCall \n ',
             "🔨 Tool #3: Rejected: User cancelled\n ",
-            "Tools executed"
+            "\n",
+            "Tools executed",
+            "\n"
         ]
         assert chunks == expected
 
@@ -189,11 +206,15 @@ async def test_run_stream_arbitrary_tool_names():
             chunks.append(chunk)
         
         expected = [
+            "\n",
+            "\n",
             '🔨 Tool #1: someCustomTool \n ',
             "🔨 Tool #1: Completed\n ",
             '🔨 Tool #2: anotherTool \n ',
             "🔨 Tool #2: Error: Failed\n ",
-            "Complete"
+            "\n",
+            "Complete",
+            "\n"
         ]
         assert chunks == expected
 
@@ -227,10 +248,14 @@ async def test_run_stream_interleaved_tool_calls():
             chunks.append(chunk)
         
         expected = [
+            "\n",
+            "\n",
             "📖 Tool #1: Reading file1.txt\n ",
             "📖 Tool #2: Reading file2.txt\n ",
             "📖 Tool #1: Read 100 lines\n ",  # Note: Tool #1 completes first
             "📖 Tool #2: Read 200 lines\n ",  # Then Tool #2 completes
-            "Read both files"
+            "\n",
+            "Read both files",
+            "\n"
         ]
         assert chunks == expected
