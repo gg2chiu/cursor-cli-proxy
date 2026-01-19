@@ -14,6 +14,9 @@ def test_fetch_models_success(registry):
 model-a - Model A
 model-b - Model B (default)
 model-c - Model C
+model-d - Model D (current, default)
+model-e - Model E (default, current)
+model-f - Model F (Thinking) (current)
 
 Tip: use --model <id> to switch."""
     
@@ -26,13 +29,19 @@ Tip: use --model <id> to switch."""
         
         models = registry.fetch_models()
         
-        assert len(models) == 3
+        assert len(models) == 6
         assert models[0].id == "model-a"
         assert models[0].name == "Model A"
         assert models[1].id == "model-b"
         assert models[1].name == "Model B"
         assert models[2].id == "model-c"
         assert models[2].name == "Model C"
+        assert models[3].id == "model-d"
+        assert models[3].name == "Model D"
+        assert models[4].id == "model-e"
+        assert models[4].name == "Model E"
+        assert models[5].id == "model-f"
+        assert models[5].name == "Model F (Thinking)"
         assert models[0].owned_by == "cursor"
 
 def test_fetch_models_cli_error(registry):

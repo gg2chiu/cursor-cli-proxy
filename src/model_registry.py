@@ -133,9 +133,9 @@ class ModelRegistry:
                 if match:
                     model_id = match.group(1)
                     model_name = match.group(2).strip()
-                    # Remove only trailing status tags like (default), (current)
+                    # Remove trailing status tags like (default), (current), (current, default)
                     # but keep model name parts like (Thinking)
-                    model_name = re.sub(r'\s+\((default|current)\)$', '', model_name).strip()
+                    model_name = re.sub(r'\s+\([^)]*?\b(?:default|current)\b[^)]*?\)$', '', model_name).strip()
                     models.append(Model(id=model_id, owned_by="cursor", name=model_name))
                 else:
                     logger.debug(f"Skipping unparseable line: {line}")
