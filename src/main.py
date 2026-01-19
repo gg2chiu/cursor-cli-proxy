@@ -3,7 +3,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.responses import StreamingResponse
 from src.models import ChatCompletionRequest, ChatCompletionResponse, Choice, Message, ChatCompletionChunk, ChunkChoice, ChunkDelta, ModelList, Model
-from src.relay import CommandBuilder, Executor
+from src.relay import CommandBuilder, Executor, extract_workspace_from_messages
 from src.config import config, logger
 from src.model_registry import model_registry
 from src.session_manager import SessionManager
@@ -40,9 +40,12 @@ async def chat_completions(
 ):
     logger.info(f"Received chat completion request for model: {request.model}, stream={request.stream}")
     try:
+        # Extract workspace from messages (if present in system prompt)
+        custom_workspace, cleaned_messages = extract_workspace_from_messages(request.messages)
+        
         # Session Management Logic
-        history_messages = request.messages[:-1]
-        current_message = request.messages[-1]
+        history_messages = cleaned_messages[:-1]
+        current_message = cleaned_messages[-1]
         
         history_hash = session_manager.calculate_history_hash(history_messages)
         session = session_manager.get_session_by_hash(history_hash)
@@ -58,7 +61,8 @@ async def chat_completions(
             logger.debug(f"Session Hit: Resuming session {session_id} for hash {history_hash[:8]}...")
         else:
             title = current_message.content[:50]
-            session_id = session_manager.create_session(history_hash, title)
+            # Pass custom_workspace when creating new session
+            session_id = session_manager.create_session(history_hash, title, custom_workspace=custom_workspace)
             # Re-fetch session to get workspace_dir
             new_session = session_manager.get_session_by_hash(history_hash)
             if new_session:
@@ -70,7 +74,7 @@ async def chat_completions(
             messages_to_send = [current_message]
             logger.debug("Sending latest message only to existing session.")
         else:
-            messages_to_send = request.messages
+            messages_to_send = cleaned_messages
             logger.debug(f"Sending full history ({len(messages_to_send)} messages) to new session.")
 
         # Build command with session_id and the appropriate messages
@@ -114,7 +118,7 @@ async def chat_completions(
                     
                     # Update Session Hash
                     response_text = "".join(full_content)
-                    new_history = request.messages + [Message(role="assistant", content=response_text)]
+                    new_history = cleaned_messages + [Message(role="assistant", content=response_text)]
                     new_hash = session_manager.calculate_history_hash(new_history)
                     session_manager.update_session_hash(history_hash, new_hash)
                     logger.debug(f"Updated session hash: {history_hash[:8]}... -> {new_hash[:8]}...")
@@ -129,7 +133,7 @@ async def chat_completions(
             content = await executor.run_non_stream(cmd, cwd=workspace_dir)
             
             # Update Session Hash
-            new_history = request.messages + [Message(role="assistant", content=content)]
+            new_history = cleaned_messages + [Message(role="assistant", content=content)]
             new_hash = session_manager.calculate_history_hash(new_history)
             session_manager.update_session_hash(history_hash, new_hash)
             logger.debug(f"Updated session hash: {history_hash[:8]}... -> {new_hash[:8]}...")

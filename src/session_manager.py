@@ -127,42 +127,58 @@ class SessionManager:
             logger.error(f"IOError saving session: {e}")
             raise RuntimeError(f"Storage error: {e}")
 
-    def create_session(self, history_hash: str, title: str = "New Chat") -> str:
+    def create_session(self, history_hash: str, title: str = "New Chat", custom_workspace: Optional[str] = None) -> str:
         """
         Create a new session by calling cursor-agent.
         Save to storage.
+        
+        Args:
+            history_hash: Hash of message history
+            title: Session title
+            custom_workspace: Optional custom workspace path (must be pre-validated)
         """
         try:
-            # Create a temporary unique workspace folder
-            temp_id = str(uuid.uuid4())
-            temp_dir = os.path.abspath(os.path.join(self.workspace_base, f"temp_{temp_id}"))
-            os.makedirs(temp_dir, exist_ok=True)
-            logger.debug(f"Created temporary workspace directory: {temp_dir}")
+            temp_dir = None
+            
+            if custom_workspace:
+                # Use custom workspace directly
+                workspace_dir = os.path.abspath(custom_workspace)
+                os.makedirs(workspace_dir, exist_ok=True)
+                logger.info(f"Using custom workspace directory: {workspace_dir}")
+            else:
+                # Create a temporary unique workspace folder
+                temp_id = str(uuid.uuid4())
+                temp_dir = os.path.abspath(os.path.join(self.workspace_base, f"temp_{temp_id}"))
+                os.makedirs(temp_dir, exist_ok=True)
+                logger.debug(f"Created temporary workspace directory: {temp_dir}")
+                workspace_dir = temp_dir
 
             # Call cursor-agent to create a new chat
             # Output format check: The CLI returns just the UUID string on stdout
             cmd = [
                 config.CURSOR_BIN,
                 "create-chat",
-                "--workspace", temp_dir,
+                "--workspace", workspace_dir,
                 "--sandbox", "enabled"
             ]
             
             output = subprocess.check_output(cmd, text=True).strip()
             session_id = output
             
-            # Use session_id as the final folder name
-            workspace_dir = os.path.abspath(os.path.join(self.workspace_base, session_id))
-            
-            # If a folder with this session_id already exists (rare collision), we might need to handle it.
-            # But normally session_id should be unique.
-            if os.path.exists(workspace_dir) and workspace_dir != temp_dir:
-                 logger.warning(f"Workspace directory {workspace_dir} already exists. Removing it.")
-                 import shutil
-                 shutil.rmtree(workspace_dir)
-            
-            os.rename(temp_dir, workspace_dir)
-            logger.debug(f"Renamed workspace directory to: {workspace_dir}")
+            # If using temp directory, rename to session_id folder
+            if temp_dir:
+                final_workspace_dir = os.path.abspath(os.path.join(self.workspace_base, session_id))
+                
+                # If a folder with this session_id already exists (rare collision), we might need to handle it.
+                # But normally session_id should be unique.
+                if os.path.exists(final_workspace_dir) and final_workspace_dir != temp_dir:
+                    logger.warning(f"Workspace directory {final_workspace_dir} already exists. Removing it.")
+                    import shutil
+                    shutil.rmtree(final_workspace_dir)
+                
+                os.rename(temp_dir, final_workspace_dir)
+                workspace_dir = final_workspace_dir
+                logger.debug(f"Renamed workspace directory to: {workspace_dir}")
             
             logger.info(f"Created new cursor-agent session: {session_id}")
             
@@ -182,8 +198,8 @@ class SessionManager:
             
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to create cursor-agent session: {e}")
-            # Cleanup temp_dir if it exists
-            if 'temp_dir' in locals() and os.path.exists(temp_dir):
+            # Cleanup temp_dir if it exists (only for non-custom workspace)
+            if temp_dir and os.path.exists(temp_dir):
                 import shutil
                 shutil.rmtree(temp_dir)
             raise RuntimeError(f"Failed to create session: {e}")

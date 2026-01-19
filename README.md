@@ -58,6 +58,7 @@ Configure the relay server using environment variables or a `.env` file in the p
 | `HOST` | `0.0.0.0` | Server bind address |
 | `PORT` | `8000` | Server port |
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
+| `WORKSPACE_WHITELIST` | `None` | Comma-separated list of allowed workspace paths |
 
 Example `.env` file:
 
@@ -67,7 +68,30 @@ CURSOR_KEY=your-cursor-api-key-here
 HOST=127.0.0.1
 PORT=8000
 LOG_LEVEL=INFO
+WORKSPACE_WHITELIST=/home/user/projects,/opt/workspace
 ```
+
+### Custom Workspace Support
+
+Clients can specify a custom workspace directory in the system prompt using the `<workspace>` tag:
+
+```json
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "<workspace>/home/user/projects/my-app</workspace>\nYou are a helpful assistant."
+    },
+    {"role": "user", "content": "Hello!"}
+  ]
+}
+```
+
+The workspace path must be:
+- An **absolute path**
+- In the `WORKSPACE_WHITELIST` (exact match or subdirectory)
+
+If validation fails, the tag is ignored and the default workspace is used. The `<workspace>` tag is automatically removed from the message before sending to cursor-agent.
 
 ## Usage
 

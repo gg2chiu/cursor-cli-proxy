@@ -1,6 +1,6 @@
 import shutil
 import sys
-from typing import Optional
+from typing import Optional, List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from loguru import logger
 
@@ -15,8 +15,15 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
+    WORKSPACE_WHITELIST: Optional[str] = None  # Comma-separated list of allowed workspace paths
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    def get_workspace_whitelist(self) -> List[str]:
+        """Parse WORKSPACE_WHITELIST into a list of paths."""
+        if not self.WORKSPACE_WHITELIST:
+            return []
+        return [p.strip() for p in self.WORKSPACE_WHITELIST.split(",") if p.strip()]
 
     def validate_cursor_bin(self):
         # 嘗試解析 CURSOR_BIN (若它是指令名稱)
