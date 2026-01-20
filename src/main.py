@@ -30,7 +30,7 @@ async def verify_auth(authorization: str = Header(None)):
 
 @app.get("/v1/models", response_model=ModelList)
 async def list_models(api_key: str = Depends(verify_auth)):
-    """回傳動態模型清單 (FR-006)"""
+    """回傳動態模型清單"""
     return ModelList(data=model_registry.get_models(api_key=api_key))
 
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
@@ -40,8 +40,8 @@ async def chat_completions(
 ):
     logger.info(f"Received chat completion request for model: {request.model}, stream={request.stream}")
     try:
-        # Extract workspace from messages (if present in system prompt)
-        custom_workspace, cleaned_messages = extract_workspace_from_messages(request.messages)
+        # Extract workspace and session_id from messages (if present in system prompt)
+        custom_workspace, custom_session_id, cleaned_messages = extract_workspace_from_messages(request.messages)
         
         # Session Management Logic
         history_messages = cleaned_messages[:-1]
@@ -53,13 +53,27 @@ async def chat_completions(
         session_id = None
         workspace_dir = None
         is_session_hit = False
+        custom_session_hash = None
         
-        if session:
+        # If custom session_id is provided, use it directly (if it exists)
+        if custom_session_id:
+            existing_session = session_manager.get_session_by_id(custom_session_id)
+            if existing_session:
+                session_id = custom_session_id
+                workspace_dir = existing_session.get("workspace_dir") or custom_workspace
+                is_session_hit = True
+                custom_session_hash = session_manager.get_hash_by_session_id(custom_session_id)
+                logger.info(f"Using custom session_id from system prompt: {session_id}")
+            else:
+                logger.warning(f"Custom session_id '{custom_session_id}' not found, falling back to normal flow")
+                custom_session_id = None
+
+        if session_id is None and session:
             session_id = session["session_id"]
             workspace_dir = session.get("workspace_dir")
             is_session_hit = True
             logger.debug(f"Session Hit: Resuming session {session_id} for hash {history_hash[:8]}...")
-        else:
+        elif session_id is None:
             title = current_message.content[:50]
             # Pass custom_workspace when creating new session
             session_id = session_manager.create_session(history_hash, title, custom_workspace=custom_workspace)
@@ -116,12 +130,13 @@ async def chat_completions(
                     logger.debug("Stream finished successfully")
                     yield "data: [DONE]\n\n"
                     
-                    # Update Session Hash
+                    # Update Session Hash (skip if custom session_id is used)
                     response_text = "".join(full_content)
                     new_history = cleaned_messages + [Message(role="assistant", content=response_text)]
                     new_hash = session_manager.calculate_history_hash(new_history)
-                    session_manager.update_session_hash(history_hash, new_hash)
-                    logger.debug(f"Updated session hash: {history_hash[:8]}... -> {new_hash[:8]}...")
+                    old_hash = custom_session_hash or history_hash
+                    session_manager.update_session_hash(old_hash, new_hash)
+                    logger.debug(f"Updated session hash: {old_hash[:8]}... -> {new_hash[:8]}...")
                     
                 except Exception as e:
                     logger.error(f"Stream error: {e}")
@@ -132,11 +147,12 @@ async def chat_completions(
         else:
             content = await executor.run_non_stream(cmd, cwd=workspace_dir)
             
-            # Update Session Hash
+            # Update Session Hash (use original hash for custom session_id)
             new_history = cleaned_messages + [Message(role="assistant", content=content)]
             new_hash = session_manager.calculate_history_hash(new_history)
-            session_manager.update_session_hash(history_hash, new_hash)
-            logger.debug(f"Updated session hash: {history_hash[:8]}... -> {new_hash[:8]}...")
+            old_hash = custom_session_hash or history_hash
+            session_manager.update_session_hash(old_hash, new_hash)
+            logger.debug(f"Updated session hash: {old_hash[:8]}... -> {new_hash[:8]}...")
             
             return ChatCompletionResponse(
                 id=f"chatcmpl-{uuid.uuid4()}",

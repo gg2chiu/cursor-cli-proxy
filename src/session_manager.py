@@ -224,3 +224,23 @@ class SessionManager:
         """Retrieve session data by history hash."""
         data = self.load_sessions()
         return data.get("sessions", {}).get(history_hash)
+
+    def get_session_by_id(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve session data by session_id."""
+        if not session_id:
+            return None
+        data = self.load_sessions()
+        for session in data.get("sessions", {}).values():
+            if session.get("session_id") == session_id:
+                return session
+        return None
+
+    def get_hash_by_session_id(self, session_id: str) -> Optional[str]:
+        """Retrieve history hash by session_id."""
+        if not session_id:
+            return None
+        data = self.load_sessions()
+        for history_hash, session in data.get("sessions", {}).items():
+            if session.get("session_id") == session_id:
+                return history_hash
+        return None

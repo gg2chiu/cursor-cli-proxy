@@ -114,8 +114,9 @@ class TestExtractWorkspaceFromMessages:
     """Tests for extract_workspace_from_messages function"""
     
     def test_extract_empty_messages(self):
-        workspace, messages = extract_workspace_from_messages([])
+        workspace, session_id, messages = extract_workspace_from_messages([])
         assert workspace is None
+        assert session_id is None
         assert messages == []
     
     def test_extract_no_workspace_tag(self):
@@ -126,9 +127,10 @@ class TestExtractWorkspaceFromMessages:
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home"}, clear=False):
             settings = Settings(_env_file=None)
             with patch("src.relay.config", settings):
-                workspace, cleaned = extract_workspace_from_messages(messages)
+                workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         assert workspace is None
+        assert session_id is None
         assert len(cleaned) == 2
         assert cleaned[0].content == "You are a helpful assistant"
     
@@ -140,9 +142,10 @@ class TestExtractWorkspaceFromMessages:
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user"}, clear=False):
             settings = Settings(_env_file=None)
             with patch("src.relay.config", settings):
-                workspace, cleaned = extract_workspace_from_messages(messages)
+                workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         assert workspace == "/home/user/project"
+        assert session_id is None
         assert "<workspace>" not in cleaned[0].content
         assert "You are helpful" in cleaned[0].content
     
@@ -155,10 +158,11 @@ class TestExtractWorkspaceFromMessages:
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user"}, clear=False):
             settings = Settings(_env_file=None)
             with patch("src.relay.config", settings):
-                workspace, cleaned = extract_workspace_from_messages(messages)
+                workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         # Should not extract from user message
         assert workspace is None
+        assert session_id is None
         # User message content unchanged
         assert "<workspace>" in cleaned[1].content
     
@@ -171,10 +175,11 @@ class TestExtractWorkspaceFromMessages:
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/allowed"}, clear=False):
             settings = Settings(_env_file=None)
             with patch("src.relay.config", settings):
-                workspace, cleaned = extract_workspace_from_messages(messages)
+                workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         # Should not validate
         assert workspace is None
+        assert session_id is None
         # Content should still be cleaned
         assert "<workspace>" not in cleaned[0].content
 

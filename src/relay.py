@@ -34,6 +34,29 @@ def parse_workspace_tag(content: str) -> Tuple[Optional[str], str]:
     return workspace_path, cleaned_content
 
 
+def parse_session_id_tag(content: str) -> Tuple[Optional[str], str]:
+    """
+    Extract session_id from <session_id>...</session_id> tag in content.
+    
+    Returns:
+        Tuple of (session_id, cleaned_content)
+        - session_id: The extracted session_id or None if not found
+        - cleaned_content: The content with the session_id tag removed
+    """
+    pattern = r'<session_id>\s*(.+?)\s*</session_id>'
+    match = re.search(pattern, content, re.DOTALL)
+    
+    if not match:
+        return None, content
+    
+    session_id = match.group(1).strip()
+    # Remove the tag from content
+    cleaned_content = re.sub(pattern, '', content, flags=re.DOTALL).strip()
+    
+    logger.debug(f"Extracted session_id tag: {session_id}")
+    return session_id, cleaned_content
+
+
 def validate_workspace_path(path: Optional[str]) -> Optional[str]:
     """
     Validate that the workspace path is absolute and in the whitelist.
@@ -70,31 +93,44 @@ def validate_workspace_path(path: Optional[str]) -> Optional[str]:
     return None
 
 
-def extract_workspace_from_messages(messages: List[Message]) -> Tuple[Optional[str], List[Message]]:
+def extract_workspace_from_messages(messages: List[Message]) -> Tuple[Optional[str], Optional[str], List[Message]]:
     """
-    Extract and validate workspace from messages (typically from system message).
+    Extract and validate workspace and session_id from messages (typically from system message).
     
     Returns:
-        Tuple of (validated_workspace_path, cleaned_messages)
+        Tuple of (validated_workspace_path, session_id, cleaned_messages)
     """
     if not messages:
-        return None, messages
+        return None, None, messages
     
     workspace_path = None
+    session_id = None
     cleaned_messages = []
     
     for msg in messages:
-        # Only look for workspace tag in system messages
-        if msg.role == "system" and workspace_path is None:
-            extracted_path, cleaned_content = parse_workspace_tag(msg.content)
-            if extracted_path:
-                workspace_path = validate_workspace_path(extracted_path)
+        # Only look for workspace and session_id tags in system messages
+        if msg.role == "system":
+            cleaned_content = msg.content
+            
+            # Extract workspace tag
+            if workspace_path is None:
+                extracted_path, cleaned_content = parse_workspace_tag(cleaned_content)
+                if extracted_path:
+                    workspace_path = validate_workspace_path(extracted_path)
+            
+            # Extract session_id tag
+            if session_id is None:
+                extracted_session_id, cleaned_content = parse_session_id_tag(cleaned_content)
+                if extracted_session_id:
+                    session_id = extracted_session_id
+                    logger.info(f"Extracted custom session_id from system prompt: {session_id}")
+            
             # Create new message with cleaned content
             cleaned_messages.append(Message(role=msg.role, content=cleaned_content))
         else:
             cleaned_messages.append(msg)
     
-    return workspace_path, cleaned_messages
+    return workspace_path, session_id, cleaned_messages
 
 
 class SlashCommandLoader:
