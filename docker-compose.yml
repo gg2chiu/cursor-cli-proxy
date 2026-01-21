@@ -1,0 +1,29 @@
+services:
+  cursor-cli-proxy:
+    build: .
+    container_name: cursor-cli-proxy
+    ports:
+      - "${PORT:-8088}:8088"
+    environment:
+      # Configuration variables from README.md
+      - CURSOR_KEY=${CURSOR_KEY:-""}
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-8088}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - WORKSPACE_WHITELIST_1=${WORKSPACE_WHITELIST_1:-""}
+      - WORKSPACE_WHITELIST_2=${WORKSPACE_WHITELIST_2:-""}
+      - WORKSPACE_WHITELIST_3=${WORKSPACE_WHITELIST_3:-""}
+      - WORKSPACE_WHITELIST_4=${WORKSPACE_WHITELIST_4:-""}
+      - WORKSPACE_WHITELIST_5=${WORKSPACE_WHITELIST_5:-""}
+    volumes:
+      # Session persistence
+      - ./sessions.json:/app/sessions.json:rw
+      # Models persistence
+      - ./models.json:/app/models.json:rw
+      # Workspace mounts (uncomment and set paths as needed)
+      - ${WORKSPACE_WHITELIST_1}:${WORKSPACE_WHITELIST_1}:rw
+      # - ${WORKSPACE_WHITELIST_2}:${WORKSPACE_WHITELIST_2}:rw
+      # - ${WORKSPACE_WHITELIST_3}:${WORKSPACE_WHITELIST_3}:rw
+      # - ${WORKSPACE_WHITELIST_4}:${WORKSPACE_WHITELIST_4}:rw
+      # - ${WORKSPACE_WHITELIST_5}:${WORKSPACE_WHITELIST_5}:rw
+    restart: unless-stopped

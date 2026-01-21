@@ -12,13 +12,18 @@ A FastAPI-based proxy server that provides an OpenAI-compatible API interface fo
 - 📝 **Structured Logging**: JSON-formatted logs for easy parsing and monitoring
 - ⚙️ **Environment Configuration**: Customize settings via environment variables
 
-## Prerequisites
 
-- Python 3.8 or higher
-- [cursor-agent](https://www.cursor.com/) CLI tool installed and available in PATH
-- Valid Cursor API key (if required by your cursor-agent installation)
 
 ## Installation
+
+### Option 1: Native Installation
+
+If you prefer to run without Docker:
+
+#### Prerequisites
+
+- Python 3.8 or higher
+- [cursor-agent](https://cursor.com/docs/cli/overview) CLI tool installed and available in PATH
 
 1. Clone the repository:
 
@@ -40,6 +45,81 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+**Note**: You must have the [cursor-agent](https://cursor.com/docs/cli/installation) CLI tool installed and available in your PATH for native installation.
+
+
+### Option 2: Docker
+
+The easiest way to run the Cursor CLI Proxy is using Docker, which handles all dependencies including the cursor-agent CLI automatically. Cursor settings (rules, commands) should be project-based, as they will not be copied to the container.
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd cursor-cli-proxy
+```
+
+2. Create a `.env` file for configuration:
+
+```bash
+cp .env.example .env
+# Edit .env with your settings (see Configuration section)
+```
+
+3. Start the service using Docker:
+
+```bash
+# Using docker compose
+docker compose up -d
+
+# Or build manually
+docker build -t cursor-cli-proxy .
+docker run -d \
+  --name cursor-cli-proxy \
+  --env-file .env \
+  -p 8000:8000 \
+  -v "$(pwd)/sessions.json:/app/sessions.json:rw" \
+  -v "$(pwd)/models.json:/app/models.json:rw" \
+  cursor-cli-proxy
+```
+
+The server will be available at `http://localhost:8000` (or your configured PORT).
+
+**Important**: If you use custom workspace paths (`WORKSPACE_WHITELIST_*`), you need to:
+1. Uncomment the corresponding volume mount in `docker-compose.yml`
+2. Ensure the paths exist on your host system
+3. Use absolute paths for the workspace whitelist
+
+#### Docker Commands
+
+```bash
+# Start the service
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop the service
+docker compose down
+
+# Rebuild after code changes
+docker compose up -d --build
+
+# Update model list
+docker compose exec cursor-cli-proxy python -m src.main --update-model
+
+# Clear session data
+docker compose exec cursor-cli-proxy python -m src.main --clear
+```
+
+#### Data Persistence
+
+The following files are mounted as volumes for persistence:
+- `sessions.json` - Session state and conversation history
+- `models.json` - Cached model list from cursor-agent
+
+These files will persist between container restarts.
+
 ## Configuration
 
 Configure the relay server using environment variables. All settings have default values defined in `src/config.py`:
@@ -47,7 +127,7 @@ You can set them via a `.env` file or your shell environment.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CURSOR_KEY` | `None` | Default Cursor API key (optional) |
+| `CURSOR_KEY` | `None` | Default Cursor API key (optional). ⚠️ **Security Warning**: This proxy does not implement authentication. You must add your own authentication layer (e.g., API keys, OAuth, reverse proxy with auth) before exposing this service with CURSOR_KEY. |
 | `HOST` | `0.0.0.0` | Server bind address |
 | `PORT` | `8000` | Server port |
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
@@ -359,7 +439,6 @@ cursor-cli-proxy/
 │   ├── model_registry.py    # Model list management
 │   └── session_manager.py   # Session tracking and persistence
 ├── tests/                   # Test suite
-├── specs/                   # Feature specifications
 ├── requirements.txt         # Python dependencies
 ├── sessions.json            # Session storage (auto-generated)
 └── models.json              # Model cache (auto-generated)
@@ -381,6 +460,19 @@ pytest
 
 
 ## Troubleshooting
+
+### Docker-specific Issues
+
+#### Container fails to start
+1. Check logs: `docker compose logs -f`
+2. Verify `.env` file exists and has correct values
+3. Ensure ports are not already in use: `sudo lsof -i :8000`
+
+#### Workspace access errors
+1. Ensure workspace paths in `.env` are absolute paths
+2. Uncomment the corresponding volume mount in `docker-compose.yml`
+3. Verify the host directory exists and has proper permissions
+4. Restart the container: `docker compose restart`
 
 ### cursor-agent not found
 
