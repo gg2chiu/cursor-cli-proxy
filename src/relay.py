@@ -251,8 +251,9 @@ class CommandBuilder:
     def build(self, stream: bool = False) -> List[str]:
         prompt = self._merge_messages()
         
+        from src.config import CURSOR_BIN
         cmd = [
-            config.CURSOR_BIN,
+            CURSOR_BIN,
             "--model", self.model,
             "--api-key", self.api_key,
             "--sandbox", "enabled",

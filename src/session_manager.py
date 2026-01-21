@@ -13,9 +13,9 @@ from src.models import Message
 class SessionManager:
     def __init__(self, storage_path: str = "sessions.json", workspace_base: Optional[str] = None):
         self.storage_path = storage_path
-        # Use config.CURSOR_RELAY_BASE instead of hardcoded ".cursor-relay"
+        from src.config import CURSOR_CLI_PROXY_TMP
         if workspace_base is None:
-            workspace_base = os.path.join(config.CURSOR_RELAY_BASE, "workspaces")
+            workspace_base = os.path.join(CURSOR_CLI_PROXY_TMP, "workspaces")
         self.workspace_base = workspace_base
         self.lock_path = f"{storage_path}.lock"
         self.lock = FileLock(self.lock_path, timeout=5)
@@ -155,8 +155,9 @@ class SessionManager:
 
             # Call cursor-agent to create a new chat
             # Output format check: The CLI returns just the UUID string on stdout
+            from src.config import CURSOR_BIN
             cmd = [
-                config.CURSOR_BIN,
+                CURSOR_BIN,
                 "create-chat",
                 "--workspace", workspace_dir,
                 "--sandbox", "enabled"
@@ -204,8 +205,9 @@ class SessionManager:
                 shutil.rmtree(temp_dir)
             raise RuntimeError(f"Failed to create session: {e}")
         except FileNotFoundError:
-            logger.error(f"cursor-agent binary not found at {config.CURSOR_BIN}")
-            raise RuntimeError(f"cursor-agent CLI not found at {config.CURSOR_BIN}")
+            from src.config import CURSOR_BIN
+            logger.error(f"cursor-agent binary not found at {CURSOR_BIN}")
+            raise RuntimeError(f"cursor-agent CLI not found at {CURSOR_BIN}")
 
     def update_session_hash(self, old_hash: str, new_hash: str):
         """

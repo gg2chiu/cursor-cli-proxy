@@ -7,6 +7,10 @@ from src.models import Message
 from src.session_manager import SessionManager
 
 
+def build_settings():
+    return Settings(_env_file=None)
+
+
 class TestParseWorkspaceTag:
     """Tests for parse_workspace_tag function"""
     
@@ -62,43 +66,51 @@ class TestValidateWorkspacePath:
         assert validate_workspace_path("") is None
     
     def test_validate_relative_path_rejected(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user"}, clear=False):
-            settings = Settings()
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 result = validate_workspace_path("relative/path")
                 assert result is None
     
     def test_validate_empty_whitelist(self):
         with patch.dict(os.environ, {}, clear=True):
-            settings = Settings(_env_file=None)
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 result = validate_workspace_path("/some/path")
                 assert result is None
     
     def test_validate_path_in_whitelist_exact(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user/project"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user/project"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 result = validate_workspace_path("/home/user/project")
                 assert result == "/home/user/project"
     
     def test_validate_path_in_whitelist_subdirectory(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 result = validate_workspace_path("/home/user/project/subdir")
                 assert result == "/home/user/project/subdir"
     
     def test_validate_path_not_in_whitelist(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/allowed"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/allowed"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 result = validate_workspace_path("/home/notallowed/project")
                 assert result is None
     
     def test_validate_multiple_whitelist_entries(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user1,/home/user2,/opt/projects"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(
+            os.environ,
+            {
+                "WORKSPACE_WHITELIST_1": "/home/user1",
+                "WORKSPACE_WHITELIST_2": "/home/user2",
+                "WORKSPACE_WHITELIST_3": "/opt/projects",
+            },
+            clear=False,
+        ):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 # First entry
                 assert validate_workspace_path("/home/user1/proj") == "/home/user1/proj"
@@ -124,8 +136,8 @@ class TestExtractWorkspaceFromMessages:
             Message(role="system", content="You are a helpful assistant"),
             Message(role="user", content="Hello")
         ]
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
@@ -139,8 +151,8 @@ class TestExtractWorkspaceFromMessages:
             Message(role="system", content="<workspace>/home/user/project</workspace>\nYou are helpful"),
             Message(role="user", content="Hello")
         ]
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
@@ -155,8 +167,8 @@ class TestExtractWorkspaceFromMessages:
             Message(role="system", content="System prompt"),
             Message(role="user", content="<workspace>/home/user/project</workspace> Hello")
         ]
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
@@ -172,8 +184,8 @@ class TestExtractWorkspaceFromMessages:
             Message(role="system", content="<workspace>/not/allowed</workspace>\nYou are helpful"),
             Message(role="user", content="Hello")
         ]
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/allowed"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/allowed"}, clear=False):
+            settings = build_settings()
             with patch("src.relay.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
@@ -185,31 +197,55 @@ class TestExtractWorkspaceFromMessages:
 
 
 class TestConfigWorkspaceWhitelist:
-    """Tests for config WORKSPACE_WHITELIST"""
+    """Tests for config WORKSPACE_WHITELIST_*"""
     
     def test_whitelist_not_set(self):
         with patch.dict(os.environ, {}, clear=True):
-            settings = Settings(_env_file=None)
+            settings = build_settings()
             assert settings.get_workspace_whitelist() == []
     
     def test_whitelist_single_path(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/home/user/projects"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user/projects"}, clear=False):
+            settings = build_settings()
             assert settings.get_workspace_whitelist() == ["/home/user/projects"]
     
     def test_whitelist_multiple_paths(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/path1,/path2,/path3"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(
+            os.environ,
+            {
+                "WORKSPACE_WHITELIST_1": "/path1",
+                "WORKSPACE_WHITELIST_2": "/path2",
+                "WORKSPACE_WHITELIST_3": "/path3",
+            },
+            clear=False,
+        ):
+            settings = build_settings()
             assert settings.get_workspace_whitelist() == ["/path1", "/path2", "/path3"]
     
     def test_whitelist_strips_whitespace(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": " /path1 , /path2 , /path3 "}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(
+            os.environ,
+            {
+                "WORKSPACE_WHITELIST_1": " /path1 ",
+                "WORKSPACE_WHITELIST_2": " /path2 ",
+                "WORKSPACE_WHITELIST_3": " /path3 ",
+            },
+            clear=False,
+        ):
+            settings = build_settings()
             assert settings.get_workspace_whitelist() == ["/path1", "/path2", "/path3"]
     
     def test_whitelist_ignores_empty_entries(self):
-        with patch.dict(os.environ, {"WORKSPACE_WHITELIST": "/path1,,/path2,,"}, clear=False):
-            settings = Settings(_env_file=None)
+        with patch.dict(
+            os.environ,
+            {
+                "WORKSPACE_WHITELIST_1": "/path1",
+                "WORKSPACE_WHITELIST_2": "",
+                "WORKSPACE_WHITELIST_3": "/path2",
+            },
+            clear=False,
+        ):
+            settings = build_settings()
             assert settings.get_workspace_whitelist() == ["/path1", "/path2"]
 
 

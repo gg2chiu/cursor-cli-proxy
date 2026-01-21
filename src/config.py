@@ -1,3 +1,4 @@
+import os
 import shutil
 import sys
 from typing import Optional, List
@@ -8,40 +9,43 @@ from loguru import logger
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
+# Constants
+CURSOR_BIN = "cursor-agent"
+CURSOR_CLI_PROXY_TMP = "/tmp/cursor-cli-proxy"
+
 class Settings(BaseSettings):
-    CURSOR_BIN: str = "cursor-agent"
     CURSOR_KEY: Optional[str] = None
-    CURSOR_RELAY_BASE: str = "/tmp/.cursor-relay"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
-    WORKSPACE_WHITELIST: Optional[str] = None  # Comma-separated list of allowed workspace paths
+    WORKSPACE_WHITELIST_1: Optional[str] = None
+    WORKSPACE_WHITELIST_2: Optional[str] = None
+    WORKSPACE_WHITELIST_3: Optional[str] = None
+    WORKSPACE_WHITELIST_4: Optional[str] = None
+    WORKSPACE_WHITELIST_5: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     def get_workspace_whitelist(self) -> List[str]:
-        """Parse WORKSPACE_WHITELIST into a list of paths."""
-        if not self.WORKSPACE_WHITELIST:
-            return []
-        return [p.strip() for p in self.WORKSPACE_WHITELIST.split(",") if p.strip()]
-
+        entries = [
+            self.WORKSPACE_WHITELIST_1,
+            self.WORKSPACE_WHITELIST_2,
+            self.WORKSPACE_WHITELIST_3,
+            self.WORKSPACE_WHITELIST_4,
+            self.WORKSPACE_WHITELIST_5,
+        ]
+        return [p.strip() for p in entries if p and p.strip()]
+    
     def validate_cursor_bin(self):
-        # 嘗試解析 CURSOR_BIN (若它是指令名稱)
-        resolved = shutil.which(self.CURSOR_BIN)
-        if resolved:
-            self.CURSOR_BIN = resolved
-        else:
-            # 若找不到，且不是絕對路徑，則發出警告
-            logger.warning(f"cursor-agent binary not found at '{self.CURSOR_BIN}'. Please install it or set CURSOR_BIN.")
+        # Try to resolve CURSOR_BIN (if it is a command name)
+        if not shutil.which(CURSOR_BIN):
+            raise FileNotFoundError(f"cursor-agent executable not found. Please install it.")
 
     def validate(self):
         self.validate_cursor_bin()
-        # 更新 Log Level
+        # Update Log Level
         logger.remove()
         logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}", level=self.LOG_LEVEL.upper())
 
 # 建立全域 config 物件
 config = Settings()
-# 我們可以選擇在 import 時自動 validate，或者保留 main.py 的呼叫。
-# 為了避免重複 log，這裡先不呼叫，讓 main.py 呼叫。
-# config.validate_cursor_bin()

@@ -180,9 +180,9 @@ if __name__ == "__main__":
     import shutil
     
     parser = argparse.ArgumentParser(description="Cursor CLI Proxy")
-    parser.add_argument("--update-model", action="store_true", help="Update model list from cursor-agent")
+    parser.add_argument("--update-model", action="store_true", help="Update model list from cursor-agent and exit")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
-    parser.add_argument("--clear", action="store_true", help="Clear sessions.json and .cursor-relay directory")
+    parser.add_argument("--clear", action="store_true", help="Clear sessions.json and temporary directory and exit")
     
     # Use parse_known_args to avoid errors if other args are passed (though we expect mostly these)
     args, _ = parser.parse_known_args()
@@ -219,7 +219,8 @@ if __name__ == "__main__":
                 logger.info(f"✓ {lock_file} removed successfully")
             
             # Clear cursor-relay base directory
-            relay_dir = config.CURSOR_RELAY_BASE
+            from src.config import CURSOR_CLI_PROXY_TMP
+            relay_dir = CURSOR_CLI_PROXY_TMP
             if os.path.exists(relay_dir):
                 logger.info(f"Removing {relay_dir} directory...")
                 shutil.rmtree(relay_dir)

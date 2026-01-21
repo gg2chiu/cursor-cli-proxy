@@ -10,7 +10,7 @@ A FastAPI-based proxy server that provides an OpenAI-compatible API interface fo
 - 🎯 **Dynamic Model Registry**: Fetch and cache available models from cursor-agent
 - 🔐 **Flexible Authentication**: Support for both Authorization headers and environment variables
 - 📝 **Structured Logging**: JSON-formatted logs for easy parsing and monitoring
-- ⚙️ **Environment Configuration**: Customize settings via `.env` file
+- ⚙️ **Environment Configuration**: Customize settings via environment variables
 
 ## Prerequisites
 
@@ -40,35 +40,48 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file for configuration:
-
-```bash
-cp .env.example .env  # If example exists, or create new file
-```
-
 ## Configuration
 
-Configure the relay server using environment variables or a `.env` file in the project root:
+Configure the relay server using environment variables. All settings have default values defined in `src/config.py`:
+You can set them via a `.env` file or your shell environment.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CURSOR_BIN` | `cursor-agent` | Path to cursor-agent executable |
 | `CURSOR_KEY` | `None` | Default Cursor API key (optional) |
-| `CURSOR_RELAY_BASE` | `/tmp/.cursor-relay` | Base directory for session workspaces |
 | `HOST` | `0.0.0.0` | Server bind address |
 | `PORT` | `8000` | Server port |
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
-| `WORKSPACE_WHITELIST` | `None` | Comma-separated list of allowed workspace paths |
+| `WORKSPACE_WHITELIST_1` | `None` | First allowed workspace path |
+| `WORKSPACE_WHITELIST_2` | `None` | Second allowed workspace path |
+| `WORKSPACE_WHITELIST_3` | `None` | Third allowed workspace path |
+| `WORKSPACE_WHITELIST_4` | `None` | Fourth allowed workspace path |
+| `WORKSPACE_WHITELIST_5` | `None` | Fifth allowed workspace path |
 
-Example `.env` file:
+**Note**: `cursor-agent` binary must be available in your system PATH. The temporary directory is fixed at `/tmp/cursor-cli-proxy`.
 
-```env
-CURSOR_BIN=cursor-agent
-CURSOR_KEY=your-cursor-api-key-here
-HOST=127.0.0.1
-PORT=8000
-LOG_LEVEL=INFO
-WORKSPACE_WHITELIST=/home/user/projects,/opt/workspace
+Example usage with a `.env` file:
+
+```bash
+cp .env.example .env
+# edit .env as needed
+```
+
+Example usage with environment variables:
+
+```bash
+export CURSOR_KEY=your-cursor-api-key-here
+export HOST=127.0.0.1
+export PORT=8000
+export LOG_LEVEL=INFO
+export WORKSPACE_WHITELIST_1=/home/user/projects
+export WORKSPACE_WHITELIST_2=/opt/workspace
+python -m src.main
+```
+
+Or pass them inline:
+
+```bash
+CURSOR_KEY=your-key HOST=127.0.0.1 PORT=8000 python -m src.main
 ```
 
 ### Custom Workspace Support
@@ -89,7 +102,7 @@ Clients can specify a custom workspace directory in the system prompt using the 
 
 The workspace path must be:
 - An **absolute path**
-- In the `WORKSPACE_WHITELIST` (exact match or subdirectory)
+- In the `WORKSPACE_WHITELIST_*` entries (exact match or subdirectory)
 
 If validation fails, the tag is ignored and the default workspace is used. The `<workspace>` tag is automatically removed from the message before sending to cursor-agent.
 
@@ -139,7 +152,7 @@ python -m src.main --clear
 This command will:
 - Clear `sessions.json` (reset to empty)
 - Remove `sessions.json.lock` file
-- Delete the entire `CURSOR_RELAY_BASE` directory
+- Delete the entire temp directory (`/tmp/cursor-cli-proxy`)
 - Exit after completion
 
 **⚠️ Warning**: This operation is irreversible!
@@ -348,7 +361,6 @@ cursor-cli-proxy/
 ├── tests/                   # Test suite
 ├── specs/                   # Feature specifications
 ├── requirements.txt         # Python dependencies
-├── .env                     # Environment configuration (create this)
 ├── sessions.json            # Session storage (auto-generated)
 └── models.json              # Model cache (auto-generated)
 ```
@@ -367,30 +379,6 @@ Then run the tests:
 pytest
 ```
 
-### Logging
-
-The server outputs structured JSON logs to stdout:
-
-```json
-{
-  "text": "Received chat completion request for model: claude-3.5-sonnet, stream=False",
-  "record": {
-    "elapsed": {...},
-    "exception": null,
-    "extra": {},
-    "file": {"name": "main.py", "path": "..."},
-    "function": "chat_completions",
-    "level": {"icon": "ℹ️", "name": "INFO", "no": 20},
-    "line": 47,
-    "message": "Received chat completion request for model: claude-3.5-sonnet, stream=False",
-    "module": "main",
-    "name": "src.main",
-    "process": {"id": 12345, "name": "MainProcess"},
-    "thread": {"id": 67890, "name": "MainThread"},
-    "time": {"repr": "2026-01-07 10:30:00.123456+08:00", "timestamp": 1736218200.123456}
-  }
-}
-```
 
 ## Troubleshooting
 
@@ -399,21 +387,20 @@ The server outputs structured JSON logs to stdout:
 If you see `cursor-agent binary not found`, ensure:
 1. cursor-agent is installed: Check Cursor app documentation
 2. It's in your PATH: `which cursor-agent` or `where cursor-agent`
-3. Or set `CURSOR_BIN` to the full path in `.env`
 
 ### Authentication errors
 
 If you receive 401 errors:
 1. Verify your Cursor API key is valid
 2. Check the `Authorization` header format: `Bearer YOUR_KEY`
-3. Or set `CURSOR_KEY` in `.env` to use as default
+3. Or set `CURSOR_KEY` environment variable to use as default
 
 ### Session issues
 
 If conversations aren't resuming correctly:
 1. Clear session data: `python -m src.main --clear`
 2. Check `sessions.json` for corruption
-3. Ensure the `CURSOR_RELAY_BASE` directory (default: `/tmp/.cursor-relay`) has write permissions
+3. Ensure the temp directory (`/tmp/cursor-cli-proxy`) has write permissions
 
 ## License
 

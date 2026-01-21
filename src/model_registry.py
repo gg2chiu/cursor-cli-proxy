@@ -63,7 +63,8 @@ class ModelRegistry:
         try:
             logger.info("Fetching models from cursor-agent CLI...")
             
-            cmd = [config.CURSOR_BIN, '--list-models']
+            from src.config import CURSOR_BIN
+            cmd = [CURSOR_BIN, '--list-models']
             # Use provided api_key or fall back to config
             key_to_use = api_key or config.CURSOR_KEY
             if key_to_use:
@@ -86,7 +87,8 @@ class ModelRegistry:
             return models
             
         except FileNotFoundError:
-            logger.error(f"cursor-agent executable not found at {config.CURSOR_BIN}. Using fallback model list.")
+            from src.config import CURSOR_BIN
+            logger.error(f"cursor-agent executable not found at {CURSOR_BIN}. Using fallback model list.")
             return self.default_models
         except Exception as e:
             logger.error(f"Error fetching models: {e}. Using fallback model list.")
