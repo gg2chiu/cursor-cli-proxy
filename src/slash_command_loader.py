@@ -68,7 +68,6 @@ class SlashCommandLoader:
         Expand a slash command. If text starts with /command, replace it with command content.
         Supports parameter replacement: $ARGUMENTS, $1, $2, ...
         """
-        text = text.strip()
         if not text.startswith("/"):
             return text
 

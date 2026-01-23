@@ -146,7 +146,7 @@ class CommandBuilder:
         merged = []
         has_assistant = any(msg.role == "assistant" for msg in self.messages)
         for idx, msg in enumerate(self.messages):
-            content = msg.content
+            content = msg.content.strip()
             logger.debug(f"Message [{idx}] role={msg.role}, content_length={len(content)}, preview={content[:100]}")
             
             # 只對 user 訊息嘗試展開 slash 指令
