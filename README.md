@@ -131,6 +131,7 @@ You can set them via a `.env` file or your shell environment.
 | `HOST` | `0.0.0.0` | Server bind address |
 | `PORT` | `8000` | Server port |
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
+| `ENABLE_INFO_IN_THINK` | `false` | Output session_id and slash_commands in `<think>` block at start of first response |
 | `WORKSPACE_WHITELIST_1` | `None` | First allowed workspace path |
 | `WORKSPACE_WHITELIST_2` | `None` | Second allowed workspace path |
 | `WORKSPACE_WHITELIST_3` | `None` | Third allowed workspace path |

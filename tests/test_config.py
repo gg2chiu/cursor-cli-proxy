@@ -13,7 +13,7 @@ def test_settings_defaults():
 
 def test_settings_env_override():
     with patch.dict(os.environ, {"PORT": "9000", "LOG_LEVEL": "DEBUG"}):
-        settings = Settings()
+        settings = Settings(_env_file=None)
         assert settings.PORT == 9000
         assert settings.LOG_LEVEL == "DEBUG"
 

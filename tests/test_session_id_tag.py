@@ -69,7 +69,7 @@ class TestExtractSessionIdFromMessages:
             Message(role="user", content="Hello")
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home"}, clear=False):
-            settings = Settings()
+            settings = Settings(_env_file=None)
             with patch("src.relay.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
@@ -84,7 +84,7 @@ class TestExtractSessionIdFromMessages:
             Message(role="user", content="Hello")
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
-            settings = Settings()
+            settings = Settings(_env_file=None)
             with patch("src.relay.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
@@ -101,7 +101,7 @@ class TestExtractSessionIdFromMessages:
             Message(role="user", content="<session_id>user-session</session_id> Hello")
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home"}, clear=False):
-            settings = Settings()
+            settings = Settings(_env_file=None)
             with patch("src.relay.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         

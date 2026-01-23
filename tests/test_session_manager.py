@@ -34,6 +34,19 @@ def test_calculate_history_hash(session_manager):
     
     assert h1 != h3 # Order matters
 
+def test_calculate_history_hash_strips_think_block(session_manager):
+    messages_without_think = [
+        Message(role="assistant", content="Hello there.")
+    ]
+    messages_with_think = [
+        Message(role="assistant", content="<think>\nfoo: bar\n</think>\n\nHello there.")
+    ]
+
+    h1 = session_manager.calculate_history_hash(messages_without_think)
+    h2 = session_manager.calculate_history_hash(messages_with_think)
+
+    assert h1 == h2
+
 @patch("subprocess.check_output")
 def test_create_session(mock_subprocess, session_manager):
     mock_subprocess.return_value = "test-uuid-1234\n"

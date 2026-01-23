@@ -1,11 +1,18 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock, MagicMock
-from src.main import app, session_manager
+from src.main import app, session_manager, config
 import json
 import os
 import pytest
 
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def disable_think_block():
+    original_value = config.ENABLE_INFO_IN_THINK
+    config.ENABLE_INFO_IN_THINK = False
+    yield
+    config.ENABLE_INFO_IN_THINK = original_value
 
 @pytest.fixture(autouse=True)
 def clean_storage():

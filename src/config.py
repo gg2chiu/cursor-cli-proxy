@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
+    ENABLE_INFO_IN_THINK: bool = False  # Output session_id and slash_commands in <think> block
     WORKSPACE_WHITELIST_1: Optional[str] = None
     WORKSPACE_WHITELIST_2: Optional[str] = None
     WORKSPACE_WHITELIST_3: Optional[str] = None

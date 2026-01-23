@@ -2,6 +2,7 @@ import json
 import hashlib
 import uuid
 import os
+import re
 import subprocess
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timezone
@@ -62,6 +63,12 @@ class SessionManager:
                 "role": d.get("role"),
                 "content": d.get("content")
             }
+            if clean_msg["role"] == "assistant" and isinstance(clean_msg["content"], str):
+                # Normalize leading whitespace and strip leading <think> block (if present).
+                content = clean_msg["content"].lstrip()
+                if content.startswith("<think>"):
+                    content = re.sub(r'^<think>.*?</think>\s*', '', content, flags=re.DOTALL)
+                clean_msg["content"] = content
             canonical_messages.append(clean_msg)
 
         # Serialize with sorted keys and minimal separators

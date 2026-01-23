@@ -103,6 +103,13 @@ async def chat_completions(
         
         executor = Executor()
         
+        # Build think block with session_id and loaded slash commands (only for new sessions, if enabled)
+        think_block = ""
+        if config.ENABLE_INFO_IN_THINK and not is_session_hit:
+            slash_command_labels = builder.slash_loader.get_command_labels()
+            slash_commands_str = "\n" + "\n".join(slash_command_labels) if slash_command_labels else "(none)"
+            think_block = f"<think>\nSession ID: {session_id}\nSlash Commands: {slash_commands_str}\n</think>\n\n"
+        
         if request.stream:
             async def event_generator():
                 req_id = f"chatcmpl-{uuid.uuid4()}"
@@ -111,6 +118,21 @@ async def chat_completions(
                 
                 logger.debug("Starting stream generation")
                 try:
+                    # Send think block as first chunk (only for new sessions)
+                    if think_block:
+                        think_chunk = ChatCompletionChunk(
+                            id=req_id,
+                            created=created,
+                            model=request.model,
+                            choices=[
+                                ChunkChoice(
+                                    index=0,
+                                    delta=ChunkDelta(content=think_block)
+                                )
+                            ]
+                        )
+                        yield f"data: {think_chunk.model_dump_json()}\n\n"
+                    
                     async for chunk in executor.run_stream(cmd, cwd=workspace_dir):
                         full_content.append(chunk)
                         chunk_data = ChatCompletionChunk(
@@ -147,6 +169,9 @@ async def chat_completions(
         else:
             content = await executor.run_non_stream(cmd, cwd=workspace_dir)
             
+            # Prepend think block to content (only for new sessions)
+            content_with_think = think_block + content if think_block else content
+            
             # Update Session Hash (use original hash for custom session_id)
             new_history = cleaned_messages + [Message(role="assistant", content=content)]
             new_hash = session_manager.calculate_history_hash(new_history)
@@ -161,7 +186,7 @@ async def chat_completions(
                 choices=[
                     Choice(
                         index=0,
-                        message=Message(role="assistant", content=content),
+                        message=Message(role="assistant", content=content_with_think),
                         finish_reason="stop"
                     )
                 ]

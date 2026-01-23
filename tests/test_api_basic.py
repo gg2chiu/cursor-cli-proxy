@@ -1,9 +1,17 @@
 from fastapi.testclient import TestClient
+import pytest
 from src.main import app, config
 from src.relay import Executor
 from unittest.mock import AsyncMock, patch
 
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def disable_think_block():
+    original_value = config.ENABLE_INFO_IN_THINK
+    config.ENABLE_INFO_IN_THINK = False
+    yield
+    config.ENABLE_INFO_IN_THINK = original_value
 
 def test_chat_completions_basic():
     # Mock Executor.run_non_stream
