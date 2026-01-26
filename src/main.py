@@ -74,7 +74,7 @@ async def chat_completions(
             is_session_hit = True
             logger.debug(f"Session Hit: Resuming session {session_id} for hash {history_hash[:8]}...")
         elif session_id is None:
-            title = current_message.content[:50]
+            title = current_message.get_text_content()[:50]
             # Pass custom_workspace when creating new session
             session_id = session_manager.create_session(history_hash, title, custom_workspace=custom_workspace)
             # Re-fetch session to get workspace_dir

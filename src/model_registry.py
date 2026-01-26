@@ -64,7 +64,7 @@ class ModelRegistry:
             logger.info("Fetching models from cursor-agent CLI...")
             
             from src.config import CURSOR_BIN
-            cmd = [CURSOR_BIN, '--list-models']
+            cmd = [CURSOR_BIN, "models"]
             # Use provided api_key or fall back to config
             key_to_use = api_key or config.CURSOR_KEY
             if key_to_use:
@@ -78,7 +78,7 @@ class ModelRegistry:
                 check=False 
             )
             
-            # The --list-models command outputs to stdout
+            # The models command outputs to stdout
             stdout_output = result.stdout
             
             models = self._parse_models(stdout_output)
@@ -95,7 +95,7 @@ class ModelRegistry:
             return self.default_models
 
     def _parse_models(self, output: str) -> List[Model]:
-        """Parse the --list-models output to extract model information.
+        """Parse the models output to extract model information.
         
         Expected format:
         Available models
