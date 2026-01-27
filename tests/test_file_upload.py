@@ -148,7 +148,7 @@ class TestSaveContentToTempFile:
     
     def test_save_text_content(self, tmp_path):
         """Test saving text content to temp file."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             content = "Hello, world!"
             filepath = save_content_to_temp_file(content)
             
@@ -158,7 +158,7 @@ class TestSaveContentToTempFile:
     
     def test_save_with_filename_hint_json(self, tmp_path):
         """Test that filename hint determines extension."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             content = '{"key": "value"}'
             filepath = save_content_to_temp_file(content, filename_hint="data.json")
             
@@ -166,7 +166,7 @@ class TestSaveContentToTempFile:
     
     def test_save_with_filename_hint_py(self, tmp_path):
         """Test Python file extension."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             content = "print('hello')"
             filepath = save_content_to_temp_file(content, filename_hint="script.py")
             
@@ -174,7 +174,7 @@ class TestSaveContentToTempFile:
     
     def test_save_with_explicit_extension(self, tmp_path):
         """Test explicit extension parameter."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             content = "data"
             filepath = save_content_to_temp_file(content, extension=".csv")
             
@@ -182,7 +182,7 @@ class TestSaveContentToTempFile:
     
     def test_same_content_same_file(self, tmp_path):
         """Test that same content produces same filename (hash-based)."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             content = "Identical content"
             filepath1 = save_content_to_temp_file(content)
             filepath2 = save_content_to_temp_file(content)
@@ -195,7 +195,7 @@ class TestSaveImageToTempFile:
     
     def test_save_jpeg_image(self, tmp_path):
         """Test saving JPEG image from data URL."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             # Create a minimal valid JPEG (just the header bytes for testing)
             # Real JPEG would be larger, but we just need to test the flow
             fake_image = b'\xff\xd8\xff\xe0\x00\x10JFIF'
@@ -209,7 +209,7 @@ class TestSaveImageToTempFile:
     
     def test_save_png_image(self, tmp_path):
         """Test saving PNG image from data URL."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             fake_image = b'\x89PNG\r\n\x1a\n'
             data_url = f"data:image/png;base64,{base64.b64encode(fake_image).decode()}"
             
@@ -225,7 +225,7 @@ class TestSaveImageToTempFile:
     
     def test_invalid_base64(self, tmp_path):
         """Test handling of invalid base64 data."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             filepath = save_image_to_temp_file("data:image/png;base64,not-valid-base64!!!")
             assert filepath is None
 
@@ -247,7 +247,7 @@ class TestCommandBuilderFileProcessing:
     
     def test_process_large_content_saved_to_file(self, tmp_path):
         """Test that large content is saved to temp file."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             messages = [Message(role="user", content="test")]
             builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
             
@@ -260,7 +260,7 @@ class TestCommandBuilderFileProcessing:
     
     def test_process_large_content_with_filename(self, tmp_path):
         """Test that large content with filename is properly processed."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             messages = [Message(role="user", content="test")]
             builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
             
@@ -273,7 +273,7 @@ class TestCommandBuilderFileProcessing:
     
     def test_process_image_part_base64(self, tmp_path):
         """Test processing base64 image part."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             messages = [Message(role="user", content="test")]
             builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
             
@@ -297,7 +297,7 @@ class TestCommandBuilderFileProcessing:
     
     def test_get_processed_content_multimodal(self, tmp_path):
         """Test _get_processed_content with multimodal message."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             msg = Message(
                 role="user",
                 content=[
@@ -330,7 +330,7 @@ class TestCommandBuilderMergeMessages:
     
     def test_merge_with_multimodal_content(self, tmp_path):
         """Test merging messages with multimodal content."""
-        with patch("src.relay.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
             messages = [
                 Message(
                     role="user",

@@ -23,7 +23,7 @@ def clean_storage():
         os.remove("test_sessions_history.json.lock")
 
 @patch("src.session_manager.subprocess.check_output")
-@patch("src.relay.asyncio.create_subprocess_exec")
+@patch("src.executor.asyncio.create_subprocess_exec")
 def test_new_session_includes_full_history(mock_exec, mock_check_output):
     # Mock create-chat to return a specific session ID
     mock_check_output.return_value = "new-session-id\n"
@@ -67,7 +67,7 @@ def test_new_session_includes_full_history(mock_exec, mock_check_output):
     assert "new-session-id" in cmd
 
 @patch("src.session_manager.subprocess.check_output")
-@patch("src.relay.asyncio.create_subprocess_exec")
+@patch("src.executor.asyncio.create_subprocess_exec")
 def test_resume_session_includes_only_last_message(mock_exec, mock_check_output):
     # 1. Create a session first
     mock_check_output.return_value = "existing-session-id\n"

@@ -32,7 +32,7 @@ def clean_storage():
         os.remove("test_sessions.json.lock")
 
 @patch("src.session_manager.subprocess.check_output")
-@patch("src.relay.asyncio.create_subprocess_exec")
+@patch("src.executor.asyncio.create_subprocess_exec")
 def test_session_flow_branching(mock_exec, mock_check_output):
     # Mock create-chat
     mock_check_output.return_value = "session-1\n"

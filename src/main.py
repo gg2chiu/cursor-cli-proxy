@@ -30,7 +30,7 @@ async def verify_auth(authorization: str = Header(None)):
 
 @app.get("/v1/models", response_model=ModelList)
 async def list_models(api_key: str = Depends(verify_auth)):
-    """回傳動態模型清單"""
+    """Return dynamic model list"""
     return ModelList(data=model_registry.get_models(api_key=api_key))
 
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
@@ -83,7 +83,7 @@ async def chat_completions(
                 workspace_dir = new_session.get("workspace_dir")
             logger.debug(f"Session Miss: Created new session {session_id} for hash {history_hash[:8]}...")
 
-        # 如果是新 session (或者 session 未命中)，發送完整歷史；如果是續傳，只發送最後一條訊息
+        # If it's a new session (or session miss), send full history; if resuming, only send the last message
         if is_session_hit:
             messages_to_send = [current_message]
             logger.debug("Sending latest message only to existing session.")
@@ -285,6 +285,14 @@ if __name__ == "__main__":
     # Add SSL configuration if HTTPS is enabled
     if config.ENABLE_HTTPS:
         import os
+        # Check that paths are configured (non-empty)
+        if not config.HTTPS_CERT_PATH:
+            logger.error("HTTPS is enabled but HTTPS_CERT_PATH is not configured")
+            sys.exit(1)
+        if not config.HTTPS_KEY_PATH:
+            logger.error("HTTPS is enabled but HTTPS_KEY_PATH is not configured")
+            sys.exit(1)
+        # Check that files exist at the configured paths
         if not os.path.exists(config.HTTPS_CERT_PATH):
             logger.error(f"HTTPS certificate not found: {config.HTTPS_CERT_PATH}")
             sys.exit(1)

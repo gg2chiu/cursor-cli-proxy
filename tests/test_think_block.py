@@ -43,7 +43,7 @@ class TestThinkBlockNonStreaming:
     """Tests for <think> block in non-streaming responses"""
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_think_block_contains_session_id(self, mock_exec, mock_check_output):
         """Test that the response contains <think> block with session_id"""
         mock_check_output.return_value = "test-session-123\n"
@@ -70,7 +70,7 @@ class TestThinkBlockNonStreaming:
         assert "Session ID: test-session-123" in content
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_think_block_contains_slash_commands(self, mock_exec, mock_check_output):
         """Test that the response contains <think> block with loaded slash commands"""
         mock_check_output.return_value = "test-session-456\n"
@@ -98,7 +98,7 @@ class TestThinkBlockNonStreaming:
         assert "/deploy" in content
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_think_block_shows_none_when_no_slash_commands(self, mock_exec, mock_check_output):
         """Test that the response shows (none) when no slash commands are loaded"""
         mock_check_output.return_value = "test-session-789\n"
@@ -123,7 +123,7 @@ class TestThinkBlockNonStreaming:
         assert "Slash Commands: (none)" in content
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_actual_response_follows_think_block(self, mock_exec, mock_check_output):
         """Test that the actual response content follows the <think> block"""
         mock_check_output.return_value = "test-session-abc\n"
@@ -154,7 +154,7 @@ class TestThinkBlockStreaming:
     """Tests for <think> block in streaming responses"""
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_think_block_is_first_chunk_in_stream(self, mock_exec, mock_check_output):
         """Test that <think> block is sent as the first chunk in streaming response"""
         mock_check_output.return_value = "stream-session-123\n"
@@ -195,7 +195,7 @@ class TestThinkBlockStreaming:
         assert "</think>" in first_chunk
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_subsequent_chunks_do_not_contain_think_block(self, mock_exec, mock_check_output):
         """Test that subsequent chunks do not contain <think> block"""
         mock_check_output.return_value = "stream-session-456\n"
@@ -242,7 +242,7 @@ class TestThinkBlockOnlyFirstMessage:
     """Tests to verify <think> block only appears in first assistant message (new session only)"""
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_new_session_has_think_block(self, mock_exec, mock_check_output):
         """Test that new session has <think> block at the start"""
         mock_check_output.return_value = "session-first\n"
@@ -263,7 +263,7 @@ class TestThinkBlockOnlyFirstMessage:
         assert "Session ID: session-first" in content1
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_resumed_session_no_think_block(self, mock_exec, mock_check_output):
         """Test that resumed session (is_session_hit=True) does NOT have <think> block"""
         # First request - create new session
@@ -315,7 +315,7 @@ class TestThinkBlockOnlyFirstMessage:
         assert "<think>" not in content2
     
     @patch("src.session_manager.subprocess.check_output")
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_think_block_only_at_response_start(self, mock_exec, mock_check_output):
         """Test that <think> block only appears at the very start of response, not in the middle"""
         mock_check_output.return_value = "test-session-xyz\n"

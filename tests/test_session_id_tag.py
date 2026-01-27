@@ -70,7 +70,7 @@ class TestExtractSessionIdFromMessages:
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home"}, clear=False):
             settings = Settings(_env_file=None)
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         assert session_id == "custom-session-id"
@@ -85,7 +85,7 @@ class TestExtractSessionIdFromMessages:
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
             settings = Settings(_env_file=None)
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         assert workspace == "/home/user/project"
@@ -102,7 +102,7 @@ class TestExtractSessionIdFromMessages:
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home"}, clear=False):
             settings = Settings(_env_file=None)
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         # Should not extract from user message
@@ -114,7 +114,7 @@ class TestExtractSessionIdFromMessages:
 class TestSessionIdPromptBehavior:
     """Tests for session_id behavior in chat completions"""
 
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_custom_session_id_sends_last_message_only(self, mock_exec):
         """When custom session_id is provided, only the last message should be sent"""
         client = TestClient(app)
@@ -169,7 +169,7 @@ class TestSessionIdPromptBehavior:
         assert "--resume" in cmd
         assert "my-custom-session" in cmd
 
-    @patch("src.relay.asyncio.create_subprocess_exec")
+    @patch("src.executor.asyncio.create_subprocess_exec")
     def test_nonexistent_custom_session_id_keeps_system_prompt(self, mock_exec):
         """When custom session_id does not exist, system prompt should be kept"""
         client = TestClient(app)

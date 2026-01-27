@@ -68,35 +68,35 @@ class TestValidateWorkspacePath:
     def test_validate_relative_path_rejected(self):
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 result = validate_workspace_path("relative/path")
                 assert result is None
     
     def test_validate_empty_whitelist(self):
         with patch.dict(os.environ, {}, clear=True):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 result = validate_workspace_path("/some/path")
                 assert result is None
     
     def test_validate_path_in_whitelist_exact(self):
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user/project"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 result = validate_workspace_path("/home/user/project")
                 assert result == "/home/user/project"
     
     def test_validate_path_in_whitelist_subdirectory(self):
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 result = validate_workspace_path("/home/user/project/subdir")
                 assert result == "/home/user/project/subdir"
     
     def test_validate_path_not_in_whitelist(self):
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/allowed"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 result = validate_workspace_path("/home/notallowed/project")
                 assert result is None
     
@@ -111,7 +111,7 @@ class TestValidateWorkspacePath:
             clear=False,
         ):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 # First entry
                 assert validate_workspace_path("/home/user1/proj") == "/home/user1/proj"
                 # Second entry
@@ -138,7 +138,7 @@ class TestExtractWorkspaceFromMessages:
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         assert workspace is None
@@ -153,7 +153,7 @@ class TestExtractWorkspaceFromMessages:
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         assert workspace == "/home/user/project"
@@ -169,7 +169,7 @@ class TestExtractWorkspaceFromMessages:
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/user"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         # Should not extract from user message
@@ -186,7 +186,7 @@ class TestExtractWorkspaceFromMessages:
         ]
         with patch.dict(os.environ, {"WORKSPACE_WHITELIST_1": "/home/allowed"}, clear=False):
             settings = build_settings()
-            with patch("src.relay.config", settings):
+            with patch("src.tag_parser.config", settings):
                 workspace, session_id, cleaned = extract_workspace_from_messages(messages)
         
         # Should not validate
