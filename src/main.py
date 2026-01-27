@@ -274,10 +274,25 @@ if __name__ == "__main__":
             logger.error(f"Error clearing session data: {e}")
             sys.exit(1)
     
-    uvicorn.run(
-        "src.main:app",
-        host=config.HOST,
-        port=config.PORT,
-        log_level=config.LOG_LEVEL.lower(),
-        reload=args.reload
-    )
+    # Build uvicorn config
+    uvicorn_kwargs = {
+        "host": config.HOST,
+        "port": config.PORT,
+        "log_level": config.LOG_LEVEL.lower(),
+        "reload": args.reload,
+    }
+    
+    # Add SSL configuration if HTTPS is enabled
+    if config.ENABLE_HTTPS:
+        import os
+        if not os.path.exists(config.HTTPS_CERT_PATH):
+            logger.error(f"HTTPS certificate not found: {config.HTTPS_CERT_PATH}")
+            sys.exit(1)
+        if not os.path.exists(config.HTTPS_KEY_PATH):
+            logger.error(f"HTTPS key not found: {config.HTTPS_KEY_PATH}")
+            sys.exit(1)
+        uvicorn_kwargs["ssl_certfile"] = config.HTTPS_CERT_PATH
+        uvicorn_kwargs["ssl_keyfile"] = config.HTTPS_KEY_PATH
+        logger.info(f"HTTPS enabled with cert: {config.HTTPS_CERT_PATH}")
+    
+    uvicorn.run("src.main:app", **uvicorn_kwargs)

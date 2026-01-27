@@ -35,6 +35,7 @@ env/
 # Project
 .coverage
 htmlcov/
+sslcert/
 .pytest_cache/
 *.log
 sessions.json*

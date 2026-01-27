@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
     ENABLE_INFO_IN_THINK: bool = False  # Output session_id and slash_commands in <think> block
+    # HTTPS configuration
+    ENABLE_HTTPS: bool = False
+    HTTPS_CERT_PATH: str = ""
+    HTTPS_KEY_PATH: str = ""
+    # Workspace whitelist
     WORKSPACE_WHITELIST_1: Optional[str] = None
     WORKSPACE_WHITELIST_2: Optional[str] = None
     WORKSPACE_WHITELIST_3: Optional[str] = None

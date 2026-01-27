@@ -83,7 +83,7 @@ docker run -d \
   cursor-cli-proxy
 ```
 
-The server will be available at `http://localhost:8000` (or your configured PORT).
+The server will be available at `http://localhost:8000` (or `https://` if HTTPS is enabled).
 
 **Important**: If you use custom workspace paths (`WORKSPACE_WHITELIST_*`), you need to:
 1. Uncomment the corresponding volume mount in `docker-compose.yml`
@@ -132,6 +132,9 @@ You can set them via a `.env` file or your shell environment.
 | `PORT` | `8000` | Server port |
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
 | `ENABLE_INFO_IN_THINK` | `false` | Output session_id and slash_commands in `<think>` block at start of first response |
+| `ENABLE_HTTPS` | `false` | Enable HTTPS/TLS encryption |
+| `HTTPS_CERT_PATH` | `""` | Path to SSL certificate file (required if HTTPS enabled) |
+| `HTTPS_KEY_PATH` | `""` | Path to SSL private key file (required if HTTPS enabled) |
 | `WORKSPACE_WHITELIST_1` | `None` | First allowed workspace path |
 | `WORKSPACE_WHITELIST_2` | `None` | Second allowed workspace path |
 | `WORKSPACE_WHITELIST_3` | `None` | Third allowed workspace path |
@@ -187,6 +190,47 @@ The workspace path must be:
 
 If validation fails, the tag is ignored and the default workspace is used. The `<workspace>` tag is automatically removed from the message before sending to cursor-agent.
 
+### HTTPS Configuration
+
+To enable HTTPS/TLS encryption:
+
+1. **Generate SSL certificates** (choose one method):
+
+   **Option A: Self-signed certificate (development/testing)**
+   ```bash
+   mkdir -p sslcert
+   openssl req -x509 -newkey rsa:4096 -keyout sslcert/key.pem -out sslcert/cert.pem -days 365 -nodes -subj "/CN=localhost"
+   ```
+
+   **Option B: Using mkcert (local development, browser-trusted)**
+   ```bash
+   # Install mkcert first: https://github.com/FiloSottile/mkcert
+   mkcert -install
+   mkdir -p sslcert
+   mkcert -key-file sslcert/key.pem -cert-file sslcert/cert.pem localhost 127.0.0.1
+   ```
+
+   **Option C: Let's Encrypt (production)**
+   ```bash
+   sudo certbot certonly --standalone -d your-domain.com
+   # Certificates will be in /etc/letsencrypt/live/your-domain.com/
+   ```
+
+2. **Configure environment variables** in `.env`:
+   ```bash
+   ENABLE_HTTPS=true
+   HTTPS_CERT_PATH=sslcert/cert.pem
+   HTTPS_KEY_PATH=sslcert/key.pem
+   ```
+
+3. **Start the server** - it will automatically use HTTPS:
+   ```bash
+   python -m src.main
+   # Output: INFO:     Uvicorn running on https://0.0.0.0:8000
+   ```
+
+**Note**: When using self-signed certificates, clients may need to disable certificate verification or add the certificate to their trust store.
+
 ## Usage
 
 ### Starting the Server
@@ -197,7 +241,7 @@ Start the relay server:
 python -m src.main
 ```
 
-The server will be available at `http://localhost:8000` (or your configured HOST:PORT).
+The server will be available at `http://localhost:8000` (or `https://` if HTTPS is enabled).
 
 ### Development Mode with Auto-Reload
 
@@ -377,7 +421,7 @@ Request → Hash History → Match Found?
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8000/v1",
+    base_url="http://localhost:8000/v1",  # Use https:// if HTTPS is enabled
     api_key="your-cursor-api-key"
 )
 
@@ -397,7 +441,7 @@ print(response.choices[0].message.content)
 import OpenAI from 'openai';
 
 const client = new OpenAI({
-  baseURL: 'http://localhost:8000/v1',
+  baseURL: 'http://localhost:8000/v1',  // Use https:// if HTTPS is enabled
   apiKey: 'your-cursor-api-key',
 });
 
@@ -474,6 +518,14 @@ pytest
 2. Uncomment the corresponding volume mount in `docker-compose.yml`
 3. Verify the host directory exists and has proper permissions
 4. Restart the container: `docker compose restart`
+
+### HTTPS certificate errors
+
+If HTTPS fails to start:
+1. Verify certificate files exist at the configured paths
+2. Check file permissions: `ls -la sslcert/`
+3. Ensure certificate and key match: `openssl x509 -noout -modulus -in sslcert/cert.pem | openssl md5` should match `openssl rsa -noout -modulus -in sslcert/key.pem | openssl md5`
+4. For self-signed certificates, clients need to use `-k` (curl) or disable SSL verification
 
 ### cursor-agent not found
 
