@@ -131,7 +131,7 @@ async def chat_completions(
                                 )
                             ]
                         )
-                        yield f"data: {think_chunk.model_dump_json()}\n\n"
+                        yield f"data: {think_chunk.model_dump_json(exclude_none=True)}\n\n"
                     
                     async for chunk in executor.run_stream(cmd, cwd=workspace_dir):
                         full_content.append(chunk)
@@ -146,7 +146,22 @@ async def chat_completions(
                                 )
                             ]
                         )
-                        yield f"data: {chunk_data.model_dump_json()}\n\n"
+                        yield f"data: {chunk_data.model_dump_json(exclude_none=True)}\n\n"
+                    
+                    # Send final chunk with finish_reason="stop" before [DONE]
+                    final_chunk = ChatCompletionChunk(
+                        id=req_id,
+                        created=created,
+                        model=request.model,
+                        choices=[
+                            ChunkChoice(
+                                index=0,
+                                delta=ChunkDelta(),
+                                finish_reason="stop"
+                            )
+                        ]
+                    )
+                    yield f"data: {final_chunk.model_dump_json(exclude_none=True)}\n\n"
                     
                     # End of stream
                     logger.debug("Stream finished successfully")
