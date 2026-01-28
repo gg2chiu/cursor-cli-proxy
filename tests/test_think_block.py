@@ -155,8 +155,8 @@ class TestThinkBlockStreaming:
     
     @patch("src.session_manager.subprocess.check_output")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_think_block_is_first_chunk_in_stream(self, mock_exec, mock_check_output):
-        """Test that <think> block is sent as the first chunk in streaming response"""
+    def test_think_block_is_last_chunk_in_stream(self, mock_exec, mock_check_output):
+        """Test that <think> block is sent as the last chunk in streaming response"""
         mock_check_output.return_value = "stream-session-123\n"
         
         mock_process = AsyncMock()
@@ -187,12 +187,12 @@ class TestThinkBlockStreaming:
                     if "content" in delta:
                         chunks.append(delta["content"])
         
-        # First chunk should contain the <think> block
+        # Last chunk should contain the <think> block
         assert len(chunks) > 0
-        first_chunk = chunks[0]
-        assert "<think>" in first_chunk
-        assert "Session ID: stream-session-123" in first_chunk
-        assert "</think>" in first_chunk
+        last_chunk = chunks[-1]
+        assert "<think>" in last_chunk
+        assert "Session ID: stream-session-123" in last_chunk
+        assert "</think>" in last_chunk
     
     @patch("src.session_manager.subprocess.check_output")
     @patch("src.executor.asyncio.create_subprocess_exec")
@@ -229,11 +229,13 @@ class TestThinkBlockStreaming:
                     if "content" in delta:
                         chunks.append(delta["content"])
         
-        # First chunk has <think>
-        assert "<think>" in chunks[0]
+        assert len(chunks) > 0
         
-        # Subsequent chunks should NOT have <think>
-        for chunk in chunks[1:]:
+        # Last chunk has <think>
+        assert "<think>" in chunks[-1]
+        
+        # All previous chunks should NOT have <think>
+        for chunk in chunks[:-1]:
             assert "<think>" not in chunk
             assert "</think>" not in chunk
 

@@ -117,22 +117,7 @@ async def chat_completions(
                 full_content = []
                 
                 logger.debug("Starting stream generation")
-                try:
-                    # Send think block as first chunk (only for new sessions)
-                    if think_block:
-                        think_chunk = ChatCompletionChunk(
-                            id=req_id,
-                            created=created,
-                            model=request.model,
-                            choices=[
-                                ChunkChoice(
-                                    index=0,
-                                    delta=ChunkDelta(content=think_block)
-                                )
-                            ]
-                        )
-                        yield f"data: {think_chunk.model_dump_json(exclude_none=True)}\n\n"
-                    
+                try:                    
                     async for chunk in executor.run_stream(cmd, cwd=workspace_dir):
                         full_content.append(chunk)
                         chunk_data = ChatCompletionChunk(
@@ -147,7 +132,22 @@ async def chat_completions(
                             ]
                         )
                         yield f"data: {chunk_data.model_dump_json(exclude_none=True)}\n\n"
-                    
+
+                    # Send think block as the last chunk (only for new sessions)
+                    if think_block:
+                        think_chunk = ChatCompletionChunk(
+                            id=req_id,
+                            created=created,
+                            model=request.model,
+                            choices=[
+                                ChunkChoice(
+                                    index=0,
+                                    delta=ChunkDelta(content=think_block)
+                                )
+                            ]
+                        )
+                        yield f"data: {think_chunk.model_dump_json(exclude_none=True)}\n\n"
+
                     # Send final chunk with finish_reason="stop" before [DONE]
                     final_chunk = ChatCompletionChunk(
                         id=req_id,
