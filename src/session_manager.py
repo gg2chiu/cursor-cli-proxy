@@ -64,8 +64,9 @@ class SessionManager:
                 "content": d.get("content")
             }
             if clean_msg["role"] == "assistant" and isinstance(clean_msg["content"], str):
-                # Normalize leading whitespace and strip leading <think> block (if present).
-                content = clean_msg["content"].lstrip()
+                # Normalize whitespace (both leading and trailing) and strip leading <think> block (if present).
+                # Using strip() instead of lstrip() to handle trailing whitespace that clients may trim.
+                content = clean_msg["content"].strip()
                 if content.startswith("<think>"):
                     content = re.sub(r'^<think>.*?</think>\s*', '', content, flags=re.DOTALL)
                 clean_msg["content"] = content
