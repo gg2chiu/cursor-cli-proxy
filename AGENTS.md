@@ -104,13 +104,47 @@ When adding new dependencies:
 2. Also add to `pyproject.toml` if it's a core dependency
 3. Install with: `./venv/bin/pip install -r requirements.txt`
 
-## Environment Variables
+## Configuration Management
+
+### Adding New Configuration Items
+
+**IMPORTANT**: When adding new configuration items to `src/config.py`, you MUST also update these related files to keep them synchronized:
+
+1. **`src/config.py`** - Add the setting to the `Settings` class with type and default value
+2. **`.env.example`** - Add the environment variable with documentation and example value
+3. **`docker-compose.yml`** - Add the environment variable mapping in the `environment` section
+
+Example workflow when adding a new config `MY_NEW_SETTING`:
+
+```python
+# 1. src/config.py - Add to Settings class
+class Settings(BaseSettings):
+    # ... existing settings ...
+    MY_NEW_SETTING: str = "default_value"  # Add with type hint and default
+```
+
+```bash
+# 2. .env.example - Add with documentation
+# Description of what MY_NEW_SETTING does
+MY_NEW_SETTING=default_value
+```
+
+```yaml
+# 3. docker-compose.yml - Add to environment section
+environment:
+  # ... existing variables ...
+  - MY_NEW_SETTING=${MY_NEW_SETTING:-default_value}
+```
+
+### Environment Variables
 
 Configuration is done via environment variables. See `.env.example` for available options:
 
 - `CURSOR_KEY` - Default Cursor API key
 - `HOST` / `PORT` - Server binding
 - `LOG_LEVEL` - Logging verbosity
+- `ENABLE_INFO_IN_THINK` - Output session info in think block
+- `ENABLE_HTTPS` / `HTTPS_CERT_PATH` / `HTTPS_KEY_PATH` - HTTPS configuration
 - `WORKSPACE_WHITELIST_*` - Allowed workspace paths
 
 ## Docker Alternative
