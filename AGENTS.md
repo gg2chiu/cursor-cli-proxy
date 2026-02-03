@@ -2,6 +2,41 @@
 
 This file provides instructions and guidelines for AI agents working on this codebase.
 
+## Development Methodology
+
+### Test-Driven Development (TDD)
+
+**IMPORTANT**: This project follows Test-Driven Development. When implementing new features or fixing bugs, follow this workflow:
+
+1. **Write Tests First** - Before writing any implementation code, write failing tests that define the expected behavior
+2. **Run Tests (Red)** - Verify the tests fail as expected
+3. **Implement Code** - Write the minimum code necessary to make the tests pass
+4. **Run Tests (Green)** - Verify all tests pass
+5. **Refactor** - Clean up the code while keeping tests green
+
+```bash
+# TDD Workflow Example:
+
+# Step 1: Write test first in tests/test_new_feature.py
+# Step 2: Run test - should FAIL (Red)
+./venv/bin/python -m pytest tests/test_new_feature.py -v
+
+# Step 3: Implement the feature in src/
+# Step 4: Run test - should PASS (Green)
+./venv/bin/python -m pytest tests/test_new_feature.py -v
+
+# Step 5: Refactor if needed, ensure tests still pass
+./venv/bin/python -m pytest -v
+```
+
+### TDD Guidelines
+
+- **New Features**: Always start by writing tests that describe the expected behavior
+- **Bug Fixes**: First write a test that reproduces the bug, then fix it
+- **Refactoring**: Ensure existing tests pass before and after refactoring
+- **Test Location**: Place tests in `tests/` directory with `test_` prefix
+- **Test Naming**: Use descriptive names like `test_session_manager_creates_new_session`
+
 ## Python Environment
 
 ### Virtual Environment (venv)
