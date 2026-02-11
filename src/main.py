@@ -106,9 +106,9 @@ async def chat_completions(
         # Build think block with session_id and loaded slash commands (only for new sessions, if enabled)
         think_block = ""
         if config.ENABLE_INFO_IN_THINK and not is_session_hit:
-            slash_command_labels = builder.slash_loader.get_command_labels()
-            slash_commands_str = "\n" + "\n".join(slash_command_labels) if slash_command_labels else "(none)"
-            think_block = f"<think>\nSession ID: {session_id}\nSlash Commands: {slash_commands_str}\n</think>\n\n"
+            command_labels = builder.slash_loader.get_command_labels()
+            commands_str = "\n" + "\n".join(command_labels) if command_labels else "(none)"
+            think_block = f"<think>\nSession ID: {session_id}\nAvailable Commands: {commands_str}\n</think>\n\n"
         
         if request.stream:
             async def event_generator():

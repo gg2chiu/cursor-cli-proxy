@@ -106,10 +106,10 @@ class CommandBuilder:
             
             # Only try to expand slash commands for user messages
             if msg.role == "user":
-                expanded = self.slash_loader.expand_slash_command(content)
-                if expanded != content:
-                    logger.info(f"Message [{idx}] slash command expanded: {len(content)} -> {len(expanded)} chars")
-                content = expanded
+                resolved = self.slash_loader.resolve_slash_command(content)
+                if resolved != content:
+                    logger.info(f"Message [{idx}] slash command resolved: {content[:50]} -> {resolved[:80]}")
+                content = resolved
             
             if has_assistant:
                 content = f"{msg.role.upper()}: {content}"

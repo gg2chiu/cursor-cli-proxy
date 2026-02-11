@@ -80,8 +80,15 @@ class TestThinkBlockNonStreaming:
         mock_process.returncode = 0
         mock_exec.return_value = mock_process
         
-        # Mock SlashCommandLoader to return specific commands
-        with patch.object(SlashCommandLoader, '__init__', lambda self, workspace_dir=None: setattr(self, 'commands', {"review": "Review code", "test": "Run tests", "deploy": "Deploy app"}) or setattr(self, 'workspace_dir', workspace_dir)):
+        # Mock SlashCommandLoader to return specific entries
+        def mock_init(self, workspace_dir=None):
+            self.workspace_dir = workspace_dir
+            self.entries = {
+                "review": {"path": "/fake/review.md", "type": "command"},
+                "test": {"path": "/fake/test.md", "type": "command"},
+                "deploy": {"path": "/fake/deploy.md", "type": "command"},
+            }
+        with patch.object(SlashCommandLoader, '__init__', mock_init):
             resp = client.post(
                 "/v1/chat/completions",
                 json={"model": "auto", "messages": [{"role": "user", "content": "hi"}]},
@@ -91,8 +98,8 @@ class TestThinkBlockNonStreaming:
         assert resp.status_code == 200
         content = resp.json()["choices"][0]["message"]["content"]
         
-        # Verify slash_commands is in the think block
-        assert "Slash Commands:" in content
+        # Verify available commands is in the think block
+        assert "Available Commands:" in content
         assert "/review" in content
         assert "/test" in content
         assert "/deploy" in content
@@ -108,8 +115,11 @@ class TestThinkBlockNonStreaming:
         mock_process.returncode = 0
         mock_exec.return_value = mock_process
         
-        # Mock SlashCommandLoader to return empty commands
-        with patch.object(SlashCommandLoader, '__init__', lambda self, workspace_dir=None: setattr(self, 'commands', {}) or setattr(self, 'workspace_dir', workspace_dir)):
+        # Mock SlashCommandLoader to return empty entries
+        def mock_init(self, workspace_dir=None):
+            self.workspace_dir = workspace_dir
+            self.entries = {}
+        with patch.object(SlashCommandLoader, '__init__', mock_init):
             resp = client.post(
                 "/v1/chat/completions",
                 json={"model": "auto", "messages": [{"role": "user", "content": "hi"}]},
@@ -119,8 +129,8 @@ class TestThinkBlockNonStreaming:
         assert resp.status_code == 200
         content = resp.json()["choices"][0]["message"]["content"]
         
-        # When no commands loaded, should show (none)
-        assert "Slash Commands: (none)" in content
+        # When no entries loaded, should show (none)
+        assert "Available Commands: (none)" in content
     
     @patch("src.session_manager.subprocess.check_output")
     @patch("src.executor.asyncio.create_subprocess_exec")
