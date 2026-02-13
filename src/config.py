@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
     ENABLE_INFO_IN_THINK: bool = False  # Output session_id and slash_commands in <think> block
+    ENABLE_SKILLS_IN_PROMPT: bool = False  # Inject available skills metadata into system prompt for new sessions
     # HTTPS configuration
     ENABLE_HTTPS: bool = False
     HTTPS_CERT_PATH: str = ""

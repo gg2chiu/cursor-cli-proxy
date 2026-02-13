@@ -177,7 +177,7 @@ def test_non_skill_md_files_in_skills_dir_ignored(tmp_path):
 # ============================================================
 
 def test_resolve_returns_at_path(tmp_path):
-    """Resolving a command should return @<path> to the .md file."""
+    """Resolving a command should return 'Use this <type> @<path>' to the .md file."""
     commands_dir = tmp_path / ".cursor" / "commands"
     commands_dir.mkdir(parents=True)
     (commands_dir / "testcc.md").write_text("Test content")
@@ -186,7 +186,7 @@ def test_resolve_returns_at_path(tmp_path):
     result = loader.resolve_slash_command("/testcc")
 
     expected_path = str(commands_dir / "testcc.md")
-    assert result == f"@{expected_path}"
+    assert result == f"Use this command @{expected_path}"
 
 
 def test_resolve_with_args(tmp_path):
@@ -199,7 +199,7 @@ def test_resolve_with_args(tmp_path):
     result = loader.resolve_slash_command("/ask What is Python?")
 
     expected_path = str(commands_dir / "ask.md")
-    assert result == f"@{expected_path} What is Python?"
+    assert result == f"Use this command @{expected_path} What is Python?"
 
 
 def test_resolve_unknown_command_passthrough(tmp_path):
@@ -219,7 +219,7 @@ def test_resolve_non_slash_unchanged(tmp_path):
 
 
 def test_resolve_skill(tmp_path):
-    """Resolving a skill command should return @path to its SKILL.md."""
+    """Resolving a skill command should return 'Use this skill @path' to its SKILL.md."""
     skill_dir = tmp_path / ".cursor" / "skills" / "brainstorming"
     skill_dir.mkdir(parents=True)
     skill_file = skill_dir / "SKILL.md"
@@ -228,11 +228,11 @@ def test_resolve_skill(tmp_path):
     loader = SlashCommandLoader(workspace_dir=str(tmp_path))
     result = loader.resolve_slash_command("/brainstorming")
 
-    assert result == f"@{skill_file}"
+    assert result == f"Use this skill @{skill_file}"
 
 
 def test_resolve_agent(tmp_path):
-    """Resolving an agent command should return @path to its .md file."""
+    """Resolving an agent command should return 'Use this agent @path' to its .md file."""
     agents_dir = tmp_path / ".cursor" / "agents"
     agents_dir.mkdir(parents=True)
     agent_file = agents_dir / "find-importers.md"
@@ -241,7 +241,7 @@ def test_resolve_agent(tmp_path):
     loader = SlashCommandLoader(workspace_dir=str(tmp_path))
     result = loader.resolve_slash_command("/find-importers")
 
-    assert result == f"@{agent_file}"
+    assert result == f"Use this agent @{agent_file}"
 
 
 # ============================================================
@@ -413,3 +413,297 @@ def test_empty_md_files_ignored(tmp_path):
 
     loader = SlashCommandLoader(workspace_dir=str(tmp_path))
     assert "empty" not in loader.entries
+
+
+# ============================================================
+# Frontmatter parsing: _parse_frontmatter
+# ============================================================
+
+def test_parse_frontmatter_with_yaml(tmp_path):
+    """_parse_frontmatter should extract name and description from YAML frontmatter."""
+    skill_dir = tmp_path / ".cursor" / "skills" / "brainstorming"
+    skill_dir.mkdir(parents=True)
+    skill_file = skill_dir / "SKILL.md"
+    skill_file.write_text(
+        "---\nname: brainstorming\ndescription: Explores user intent and design.\n---\n\n# Brainstorming\n"
+    )
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+    result = loader._parse_frontmatter(str(skill_file))
+
+    assert result is not None
+    assert result["name"] == "brainstorming"
+    assert result["description"] == "Explores user intent and design."
+
+
+def test_parse_frontmatter_without_yaml(tmp_path):
+    """_parse_frontmatter should return None when no YAML frontmatter exists."""
+    skill_dir = tmp_path / ".cursor" / "skills" / "simple"
+    skill_dir.mkdir(parents=True)
+    skill_file = skill_dir / "SKILL.md"
+    skill_file.write_text("# Simple Skill\nJust a heading, no frontmatter.")
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+    result = loader._parse_frontmatter(str(skill_file))
+
+    assert result is None
+
+
+def test_parse_frontmatter_with_quoted_description(tmp_path):
+    """_parse_frontmatter should handle quoted description values."""
+    skill_dir = tmp_path / ".cursor" / "skills" / "quoted"
+    skill_dir.mkdir(parents=True)
+    skill_file = skill_dir / "SKILL.md"
+    skill_file.write_text(
+        '---\nname: quoted\ndescription: "A description with special: chars"\n---\n\n# Quoted\n'
+    )
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+    result = loader._parse_frontmatter(str(skill_file))
+
+    assert result is not None
+    assert result["description"] == "A description with special: chars"
+
+
+# ============================================================
+# Description stored in entries
+# ============================================================
+
+def test_description_stored_in_entries_from_frontmatter(tmp_path):
+    """Entries should store description from YAML frontmatter when available."""
+    skill_dir = tmp_path / ".cursor" / "skills" / "my-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: my-skill\ndescription: Does useful things.\n---\n\n# My Skill\n"
+    )
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+
+    assert "my-skill" in loader.entries
+    assert loader.entries["my-skill"]["description"] == "Does useful things."
+
+
+def test_description_falls_back_to_title(tmp_path):
+    """When no frontmatter, description should fall back to the first # heading."""
+    commands_dir = tmp_path / ".cursor" / "commands"
+    commands_dir.mkdir(parents=True)
+    (commands_dir / "review.md").write_text("# Review Code\nReview the code.")
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+
+    assert "review" in loader.entries
+    assert loader.entries["review"]["description"] == "Review Code"
+
+
+def test_description_none_when_no_frontmatter_no_heading(tmp_path):
+    """When no frontmatter and no heading, description should be None."""
+    commands_dir = tmp_path / ".cursor" / "commands"
+    commands_dir.mkdir(parents=True)
+    (commands_dir / "plain.md").write_text("just some plain text")
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+
+    assert "plain" in loader.entries
+    assert loader.entries["plain"]["description"] is None
+
+
+# ============================================================
+# get_skills_metadata_xml
+# ============================================================
+
+def test_get_skills_metadata_xml_contains_all_types(tmp_path):
+    """get_skills_metadata_xml should include commands, skills, and agents."""
+    # Command
+    cmd_dir = tmp_path / ".cursor" / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "review.md").write_text("# Review Code\nReview the code.")
+
+    # Skill with frontmatter
+    skill_dir = tmp_path / ".cursor" / "skills" / "brainstorming"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: brainstorming\ndescription: Explore ideas before coding.\n---\n\n# Brainstorming\n"
+    )
+
+    # Agent
+    agent_dir = tmp_path / ".cursor" / "agents"
+    agent_dir.mkdir(parents=True)
+    (agent_dir / "finder.md").write_text("# Finder Agent\nFinds things.")
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+    xml = loader.get_skills_metadata_xml()
+
+    assert "<available_skills>" in xml
+    assert "</available_skills>" in xml
+
+    # Check command entry uses <command> tag
+    assert "<command>" in xml
+    assert "</command>" in xml
+    assert "<name>review</name>" in xml
+    assert "<description>Review Code</description>" in xml
+
+    # Check skill entry uses <skill> tag (with frontmatter description)
+    assert "<skill>" in xml
+    assert "</skill>" in xml
+    assert "<name>brainstorming</name>" in xml
+    assert "<description>Explore ideas before coding.</description>" in xml
+
+    # Check agent entry uses <agent> tag
+    assert "<agent>" in xml
+    assert "</agent>" in xml
+    assert "<name>finder</name>" in xml
+    assert "<description>Finder Agent</description>" in xml
+
+    # Verify no <type> child tags exist
+    assert "<type>" not in xml
+
+    # Check location paths are present
+    assert f"<location>{cmd_dir / 'review.md'}</location>" in xml
+    assert f"<location>{skill_dir / 'SKILL.md'}</location>" in xml
+    assert f"<location>{agent_dir / 'finder.md'}</location>" in xml
+
+
+def test_get_skills_metadata_xml_empty_workspace(tmp_path):
+    """get_skills_metadata_xml should return empty string when no entries exist."""
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+    xml = loader.get_skills_metadata_xml()
+
+    assert xml == ""
+
+
+def test_get_skills_metadata_xml_omits_description_when_none(tmp_path):
+    """Entries with no description should still appear but with empty description."""
+    commands_dir = tmp_path / ".cursor" / "commands"
+    commands_dir.mkdir(parents=True)
+    (commands_dir / "plain.md").write_text("just text, no heading")
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+    xml = loader.get_skills_metadata_xml()
+
+    assert "<command>" in xml
+    assert "</command>" in xml
+    assert "<name>plain</name>" in xml
+    # description tag should still be present but empty
+    assert "<description></description>" in xml
+
+
+def test_get_skills_metadata_xml_escapes_special_chars(tmp_path):
+    """XML special characters in description should be escaped."""
+    skill_dir = tmp_path / ".cursor" / "skills" / "data-tool"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        '---\nname: data-tool\ndescription: "Handles <input> & <output> for \"data\" processing"\n---\n\n# Data Tool\n'
+    )
+
+    loader = SlashCommandLoader(workspace_dir=str(tmp_path))
+    xml = loader.get_skills_metadata_xml()
+
+    # & must be escaped as &amp;, < as &lt;, > as &gt;
+    assert "&amp;" in xml
+    assert "&lt;input&gt;" in xml
+    assert "&lt;output&gt;" in xml
+    # Raw unescaped characters must NOT appear in description value
+    assert "<input>" not in xml
+    assert "<output>" not in xml
+
+
+# ============================================================
+# Integration: skills XML injection in prompt (main.py logic)
+# ============================================================
+
+def test_skills_xml_injected_for_new_session(tmp_path):
+    """When ENABLE_SKILLS_IN_PROMPT is True and session is new, skills XML should be prepended."""
+    from src.config import config
+
+    # Set up a skill
+    skill_dir = tmp_path / ".cursor" / "skills" / "brainstorming"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: brainstorming\ndescription: Explore ideas.\n---\n\n# Brainstorming\n"
+    )
+
+    original_value = config.ENABLE_SKILLS_IN_PROMPT
+    config.ENABLE_SKILLS_IN_PROMPT = True
+    try:
+        # Simulate what main.py does for a new session
+        is_session_hit = False
+        messages_to_send = [Message(role="user", content="hello")]
+
+        if config.ENABLE_SKILLS_IN_PROMPT and not is_session_hit:
+            skills_loader = SlashCommandLoader(str(tmp_path))
+            skills_xml = skills_loader.get_skills_metadata_xml()
+            if skills_xml:
+                skills_message = Message(role="system", content=skills_xml)
+                messages_to_send = [skills_message] + messages_to_send
+
+        # First message should be the skills system message
+        assert len(messages_to_send) == 2
+        assert messages_to_send[0].role == "system"
+        content = messages_to_send[0].get_text_content()
+        assert "<available_skills>" in content
+        assert "<name>brainstorming</name>" in content
+        assert "<description>Explore ideas.</description>" in content
+    finally:
+        config.ENABLE_SKILLS_IN_PROMPT = original_value
+
+
+def test_skills_xml_skipped_for_resumed_session(tmp_path):
+    """When is_session_hit is True, skills XML should NOT be injected."""
+    from src.config import config
+
+    skill_dir = tmp_path / ".cursor" / "skills" / "brainstorming"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: brainstorming\ndescription: Explore ideas.\n---\n\n# Brainstorming\n"
+    )
+
+    original_value = config.ENABLE_SKILLS_IN_PROMPT
+    config.ENABLE_SKILLS_IN_PROMPT = True
+    try:
+        # Simulate what main.py does for a resumed session
+        is_session_hit = True
+        messages_to_send = [Message(role="user", content="follow-up")]
+
+        if config.ENABLE_SKILLS_IN_PROMPT and not is_session_hit:
+            skills_loader = SlashCommandLoader(str(tmp_path))
+            skills_xml = skills_loader.get_skills_metadata_xml()
+            if skills_xml:
+                skills_message = Message(role="system", content=skills_xml)
+                messages_to_send = [skills_message] + messages_to_send
+
+        # Should remain as-is, no injection
+        assert len(messages_to_send) == 1
+        assert messages_to_send[0].role == "user"
+        assert "<available_skills>" not in messages_to_send[0].get_text_content()
+    finally:
+        config.ENABLE_SKILLS_IN_PROMPT = original_value
+
+
+def test_skills_xml_skipped_when_disabled(tmp_path):
+    """When ENABLE_SKILLS_IN_PROMPT is False, skills XML should NOT be injected."""
+    from src.config import config
+
+    skill_dir = tmp_path / ".cursor" / "skills" / "brainstorming"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: brainstorming\ndescription: Explore ideas.\n---\n\n# Brainstorming\n"
+    )
+
+    original_value = config.ENABLE_SKILLS_IN_PROMPT
+    config.ENABLE_SKILLS_IN_PROMPT = False
+    try:
+        is_session_hit = False
+        messages_to_send = [Message(role="user", content="hello")]
+
+        if config.ENABLE_SKILLS_IN_PROMPT and not is_session_hit:
+            skills_loader = SlashCommandLoader(str(tmp_path))
+            skills_xml = skills_loader.get_skills_metadata_xml()
+            if skills_xml:
+                skills_message = Message(role="system", content=skills_xml)
+                messages_to_send = [skills_message] + messages_to_send
+
+        # Should remain as-is, no injection
+        assert len(messages_to_send) == 1
+        assert messages_to_send[0].role == "user"
+    finally:
+        config.ENABLE_SKILLS_IN_PROMPT = original_value

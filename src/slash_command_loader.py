@@ -1,5 +1,6 @@
 import os
 import re
+from html import escape as xml_escape
 from pathlib import Path
 from typing import Dict, List, Optional
 from loguru import logger
@@ -83,6 +84,38 @@ class SlashCommandLoader:
         except Exception as e:
             logger.warning(f"Failed to read agents directory {directory}: {e}")
 
+    def _parse_frontmatter(self, filepath: str) -> Optional[Dict[str, str]]:
+        """Extract name and description from YAML frontmatter (--- delimited block).
+
+        Returns a dict with 'name' and/or 'description' keys, or None if no frontmatter.
+        """
+        try:
+            content = Path(filepath).read_text(encoding="utf-8")
+        except Exception:
+            return None
+
+        # Match YAML frontmatter block: starts and ends with ---
+        fm_match = re.match(r'^---\s*\n(.*?)\n---', content, re.DOTALL)
+        if not fm_match:
+            return None
+
+        fm_text = fm_match.group(1)
+        result: Dict[str, str] = {}
+
+        for line in fm_text.splitlines():
+            # Match key: value (with optional quotes around value)
+            kv_match = re.match(r'^(\w+)\s*:\s*(.+)$', line.strip())
+            if kv_match:
+                key = kv_match.group(1)
+                value = kv_match.group(2).strip()
+                # Strip surrounding quotes if present
+                if (value.startswith('"') and value.endswith('"')) or \
+                   (value.startswith("'") and value.endswith("'")):
+                    value = value[1:-1]
+                result[key] = value
+
+        return result if result else None
+
     def _register_entry(self, command_id: str, path: str, entry_type: str):
         """Register an entry, skipping empty files. Later calls override earlier ones."""
         try:
@@ -94,7 +127,17 @@ class SlashCommandLoader:
             logger.warning(f"Failed to read {path}: {e}")
             return
 
-        self.entries[command_id] = {"path": path, "type": entry_type}
+        # Extract description: prefer frontmatter, fall back to first heading
+        description = None
+        frontmatter = self._parse_frontmatter(path)
+        if frontmatter and "description" in frontmatter:
+            description = frontmatter["description"]
+        else:
+            title = self._extract_title(path)
+            if title:
+                description = title
+
+        self.entries[command_id] = {"path": path, "type": entry_type, "description": description}
         logger.debug(f"Loaded {entry_type}: /{command_id} from {path}")
 
     def _extract_title(self, filepath: str) -> Optional[str]:
@@ -121,10 +164,37 @@ class SlashCommandLoader:
                 labels.append(f"({entry_type}) /{command_id}")
         return labels
 
+    def get_skills_metadata_xml(self) -> str:
+        """Generate an <available_skills> XML block listing all entries with metadata.
+
+        Each entry uses its type as the XML tag name (e.g. <skill>, <command>, <agent>)
+        instead of a generic tag with a <type> child. Returns empty string if
+        no entries are loaded.
+        """
+        if not self.entries:
+            return ""
+
+        lines = ["<available_skills>"]
+        for command_id, entry in self.entries.items():
+            entry_type = entry["type"]
+            description = xml_escape(entry.get("description") or "")
+            name = xml_escape(command_id)
+            location = xml_escape(entry["path"])
+            lines.append(f"  <{entry_type}>")
+            lines.append(f"    <name>{name}</name>")
+            lines.append(f"    <description>{description}</description>")
+            lines.append(f"    <location>{location}</location>")
+            lines.append(f"  </{entry_type}>")
+        lines.append("</available_skills>")
+
+        return "\n".join(lines)
+
     def resolve_slash_command(self, text: str) -> str:
         """Resolve a slash command to an @path reference.
 
-        If text starts with /command, replace with @<path-to-md> [args].
+        If text starts with /command, replace with
+        "Use this <type> @<path-to-md> [args]" where <type> is
+        skill, command, or agent depending on the entry type.
         Unknown commands and non-slash text pass through unchanged.
         """
         if not text.startswith("/"):
@@ -143,8 +213,9 @@ class SlashCommandLoader:
 
         entry = self.entries[command_id]
         path = entry["path"]
+        entry_type = entry["type"]
         logger.info(f"Resolving /{command_id} -> @{path}")
 
         if args_text:
-            return f"@{path} {args_text}"
-        return f"@{path}"
+            return f"Use this {entry_type} @{path} {args_text}"
+        return f"Use this {entry_type} @{path}"

@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.responses import StreamingResponse
 from src.models import ChatCompletionRequest, ChatCompletionResponse, Choice, Message, ChatCompletionChunk, ChunkChoice, ChunkDelta, ModelList, Model
 from src.relay import CommandBuilder, Executor, extract_workspace_from_messages
+from src.slash_command_loader import SlashCommandLoader
 from src.config import config, logger
 from src.model_registry import model_registry
 from src.session_manager import SessionManager
@@ -90,6 +91,15 @@ async def chat_completions(
         else:
             messages_to_send = cleaned_messages
             logger.debug(f"Sending full history ({len(messages_to_send)} messages) to new session.")
+
+        # Inject available skills metadata into system prompt for new sessions
+        if config.ENABLE_SKILLS_IN_PROMPT and not is_session_hit:
+            skills_loader = SlashCommandLoader(workspace_dir)
+            skills_xml = skills_loader.get_skills_metadata_xml()
+            if skills_xml:
+                skills_message = Message(role="system", content=skills_xml)
+                messages_to_send = [skills_message] + messages_to_send
+                logger.info(f"Injected skills metadata ({len(skills_loader.entries)} entries) into system prompt")
 
         # Build command with session_id and the appropriate messages
         builder = CommandBuilder(
