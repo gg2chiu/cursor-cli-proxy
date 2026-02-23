@@ -327,6 +327,52 @@ class TestCommandBuilderMergeMessages:
         prompt = cmd[-1]
         assert "You are helpful." in prompt
         assert "Hello" in prompt
+
+    def test_system_message_large_content_not_saved_to_temp_file(self, tmp_path):
+        """System messages (e.g. skills metadata) should never be saved to temp files,
+        even when exceeding CONTENT_SIZE_THRESHOLD."""
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+            large_system_content = "<available_skills>" + "x" * (CONTENT_SIZE_THRESHOLD + 500) + "</available_skills>"
+            messages = [
+                Message(role="system", content=large_system_content),
+                Message(role="user", content="Hello")
+            ]
+            builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
+            cmd = builder.build()
+
+            prompt = cmd[-1]
+            assert "<available_skills>" in prompt
+            assert "</available_skills>" in prompt
+            assert "@" not in prompt.split("Hello")[0]
+
+    def test_assistant_message_large_content_not_saved_to_temp_file(self, tmp_path):
+        """Assistant messages should not be saved to temp files either."""
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+            large_assistant_content = "Here is a very long response: " + "y" * (CONTENT_SIZE_THRESHOLD + 500)
+            messages = [
+                Message(role="user", content="Tell me something"),
+                Message(role="assistant", content=large_assistant_content),
+                Message(role="user", content="Thanks")
+            ]
+            builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
+            cmd = builder.build()
+
+            prompt = cmd[-1]
+            assert "Here is a very long response:" in prompt
+            assert "@" not in prompt.split("Thanks")[0].split("Tell me something")[1]
+
+    def test_user_message_large_content_still_saved_to_temp_file(self, tmp_path):
+        """User messages with large content should still be saved to temp files."""
+        with patch("src.temp_file_handler.CURSOR_CLI_PROXY_TMP", str(tmp_path)):
+            large_user_content = "data.json\n" + "{" + '"key": "value",' * 500 + "}"
+            messages = [
+                Message(role="user", content=large_user_content)
+            ]
+            builder = CommandBuilder(model="auto", api_key="sk-test", messages=messages)
+            cmd = builder.build()
+
+            prompt = cmd[-1]
+            assert "@" in prompt
     
     def test_merge_with_multimodal_content(self, tmp_path):
         """Test merging messages with multimodal content."""

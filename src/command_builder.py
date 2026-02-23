@@ -95,13 +95,29 @@ class CommandBuilder:
         
         return "\n".join(texts)
 
+    def _get_raw_content(self, msg: Message) -> str:
+        """Get message content as plain text without temp file processing."""
+        if isinstance(msg.content, str):
+            return msg.content
+        texts = []
+        for part in msg.content:
+            if hasattr(part, 'type') and part.type == "text":
+                texts.append(part.text if hasattr(part, 'text') else "")
+            elif isinstance(part, dict) and part.get("type") == "text":
+                texts.append(part.get("text", ""))
+        return "\n".join(texts)
+
     def _merge_messages(self) -> str:
         """Merge all conversation content into a single Prompt and expand slash commands"""
         merged = []
         has_assistant = any(msg.role == "assistant" for msg in self.messages)
         for idx, msg in enumerate(self.messages):
-            # Use _get_processed_content to handle large file content
-            content = self._get_processed_content(msg).strip()
+            # Only apply temp-file processing to user messages (file uploads).
+            # System/assistant messages are instructions or context that must stay inline.
+            if msg.role == "user":
+                content = self._get_processed_content(msg).strip()
+            else:
+                content = self._get_raw_content(msg).strip()
             logger.debug(f"Message [{idx}] role={msg.role}, content_length={len(content)}, preview={content[:100]}")
             
             # Only try to expand slash commands for user messages
