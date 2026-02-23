@@ -6,7 +6,7 @@ from src.models import ChatCompletionRequest, ChatCompletionResponse, Choice, Me
 from src.relay import CommandBuilder, Executor, extract_workspace_from_messages
 from src.slash_command_loader import SlashCommandLoader
 from src.config import config, logger
-from src.model_registry import model_registry
+from src.model_registry import model_registry, ModelRegistry
 from src.session_manager import SessionManager
 import time
 import uuid
@@ -39,6 +39,7 @@ async def chat_completions(
     request: ChatCompletionRequest,
     api_key: str = Depends(verify_auth)
 ):
+    request.model = ModelRegistry.to_cli_id(request.model)
     logger.info(f"Received chat completion request for model: {request.model}, stream={request.stream}")
     try:
         # Extract workspace and session_id from messages (if present in system prompt)

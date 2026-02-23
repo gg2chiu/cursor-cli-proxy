@@ -40,7 +40,7 @@ def test_load_models_from_file(registry):
     cache_file = model_registry_module.CACHE_FILE
     
     # Create a dummy models.json at the patched location
-    dummy_data = [{"id": "loaded-from-file", "owned_by": "test", "object": "model", "created": 0}]
+    dummy_data = [{"id": "loaded-from-file", "owned_by": "test", "object": "model"}]
     with open(cache_file, "w") as f:
         json.dump(dummy_data, f)
         

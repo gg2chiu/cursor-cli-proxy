@@ -2,232 +2,229 @@
   {
     "id": "auto",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Auto"
   },
   {
     "id": "composer-1.5",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Composer 1.5"
   },
   {
     "id": "composer-1",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Composer 1"
   },
   {
     "id": "gpt-5.3-codex",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex"
   },
   {
     "id": "gpt-5.3-codex-low",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex Low"
   },
   {
     "id": "gpt-5.3-codex-high",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex High"
   },
   {
     "id": "gpt-5.3-codex-xhigh",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex Extra High"
   },
   {
     "id": "gpt-5.3-codex-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex Fast"
   },
   {
     "id": "gpt-5.3-codex-low-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex Low Fast"
   },
   {
     "id": "gpt-5.3-codex-high-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex High Fast"
   },
   {
     "id": "gpt-5.3-codex-xhigh-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex Extra High Fast"
   },
   {
     "id": "gpt-5.2",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2"
   },
   {
     "id": "gpt-5.2-codex",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex"
   },
   {
     "id": "gpt-5.2-codex-high",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex High"
   },
   {
     "id": "gpt-5.2-codex-low",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex Low"
   },
   {
     "id": "gpt-5.2-codex-xhigh",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex Extra High"
   },
   {
     "id": "gpt-5.2-codex-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex Fast"
   },
   {
     "id": "gpt-5.2-codex-high-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex High Fast"
   },
   {
     "id": "gpt-5.2-codex-low-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex Low Fast"
   },
   {
     "id": "gpt-5.2-codex-xhigh-fast",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex Extra High Fast"
   },
   {
     "id": "gpt-5.1-codex-max",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.1 Codex Max"
   },
   {
     "id": "gpt-5.1-codex-max-high",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.1 Codex Max High"
   },
   {
     "id": "opus-4.6-thinking",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Claude 4.6 Opus (Thinking)"
   },
   {
     "id": "gpt-5.2-high",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.2 High"
   },
   {
     "id": "opus-4.6",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Claude 4.6 Opus"
   },
   {
     "id": "opus-4.5",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Claude 4.5 Opus"
   },
   {
     "id": "opus-4.5-thinking",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Claude 4.5 Opus (Thinking)"
   },
   {
+    "id": "sonnet-4.6",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Claude 4.6 Sonnet"
+  },
+  {
+    "id": "sonnet-4.6-thinking",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Claude 4.6 Sonnet (Thinking)"
+  },
+  {
     "id": "sonnet-4.5",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Claude 4.5 Sonnet"
   },
   {
     "id": "sonnet-4.5-thinking",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Claude 4.5 Sonnet (Thinking)"
   },
   {
     "id": "gpt-5.1-high",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "GPT-5.1 High"
   },
   {
+    "id": "gemini-3.1-pro",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Gemini 3.1 Pro"
+  },
+  {
     "id": "gemini-3-pro",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Gemini 3 Pro"
   },
   {
     "id": "gemini-3-flash",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Gemini 3 Flash"
   },
   {
+    "id": "gpt-5.1-codex-mini",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.1 Codex Mini"
+  },
+  {
     "id": "grok",
     "object": "model",
-    "created": 1770783421,
     "owned_by": "cursor",
     "name": "Grok"
+  },
+  {
+    "id": "kimi-k2.5",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Kimi K2.5"
   }
 ]

@@ -18,10 +18,24 @@ class ModelRegistry:
             cls._instance = super(ModelRegistry, cls).__new__(cls)
         return cls._instance
 
+    _CLAUDE_PREFIXES = ("opus-", "sonnet-")
+
     def __init__(self):
-        # Singleton init usually doesn't do much if __new__ handles instance
-        # But for clarity we can rely on _models being None initially
         pass
+
+    @staticmethod
+    def to_display_id(model_id: str) -> str:
+        """Add 'claude-' prefix to Claude model IDs for API display."""
+        if model_id.startswith(ModelRegistry._CLAUDE_PREFIXES) and not model_id.startswith("claude-"):
+            return f"claude-{model_id}"
+        return model_id
+
+    @staticmethod
+    def to_cli_id(model_id: str) -> str:
+        """Strip 'claude-' prefix so the CLI receives the original ID."""
+        if model_id.startswith("claude-"):
+            return model_id[len("claude-"):]
+        return model_id
 
     @property
     def default_models(self) -> List[Model]:
@@ -178,7 +192,7 @@ class ModelRegistry:
                 # So we stick to defaults if no file.
                 self._models = self.default_models
                 
-        return self._models
+        return [m.model_copy(update={"id": self.to_display_id(m.id)}) for m in self._models]
 
     def refresh(self, api_key: Optional[str] = None) -> List[Model]:
         """Force refresh the model list."""
