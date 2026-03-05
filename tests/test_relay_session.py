@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock, MagicMock
+from conftest import make_popen_mock
 from src.main import app, session_manager, config
 import json
 import os
@@ -31,11 +32,11 @@ def clean_storage():
     if os.path.exists("test_sessions.json.lock"):
         os.remove("test_sessions.json.lock")
 
-@patch("src.session_manager.subprocess.check_output")
+@patch("src.session_manager.subprocess.Popen")
 @patch("src.executor.asyncio.create_subprocess_exec")
-def test_session_flow_branching(mock_exec, mock_check_output):
+def test_session_flow_branching(mock_exec, mock_popen):
     # Mock create-chat
-    mock_check_output.return_value = "session-1\n"
+    mock_popen.return_value = make_popen_mock("session-1")
     
     # Mock executor (relay)
     mock_process = AsyncMock()
@@ -53,8 +54,8 @@ def test_session_flow_branching(mock_exec, mock_check_output):
     assert resp1.status_code == 200
     assert resp1.json()["choices"][0]["message"]["content"] == "Answer1"
     
-    # Verify session-1 created (mock_check_output called)
-    mock_check_output.assert_called_once()
+    # Verify session-1 created (mock_popen called)
+    mock_popen.assert_called_once()
     
     # 2. Continue Chat (Resume)
     # History: User: Hi, Assistant: Answer1
@@ -71,14 +72,14 @@ def test_session_flow_branching(mock_exec, mock_check_output):
     }
     resp2 = client.post("/v1/chat/completions", json=req2, headers={"Authorization": "Bearer test"})
     assert resp2.status_code == 200
-    # Verify no new session created (mock_check_output still 1 call)
-    assert mock_check_output.call_count == 1
+    # Verify no new session created (mock_popen still 1 call)
+    assert mock_popen.call_count == 1
     
     # 3. Branching Chat (Fork)
     # Modify history: User: Hello (instead of Hi)
     # New: User: How are you?
     # This simulates a different conversation path
-    mock_check_output.return_value = "session-2\n"
+    mock_popen.return_value = make_popen_mock("session-2")
     mock_process.communicate.return_value = (b'{"result": "Answer3"}', b"")
     
     req3 = {
@@ -92,5 +93,5 @@ def test_session_flow_branching(mock_exec, mock_check_output):
     resp3 = client.post("/v1/chat/completions", json=req3, headers={"Authorization": "Bearer test"})
     assert resp3.status_code == 200
     
-    # Verify new session created (mock_check_output call count 2)
-    assert mock_check_output.call_count == 2
+    # Verify new session created (mock_popen call count 2)
+    assert mock_popen.call_count == 2

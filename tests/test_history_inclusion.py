@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
+from conftest import make_popen_mock
 from src.main import app, session_manager
 import json
 import os
@@ -22,11 +23,11 @@ def clean_storage():
     if os.path.exists("test_sessions_history.json.lock"):
         os.remove("test_sessions_history.json.lock")
 
-@patch("src.session_manager.subprocess.check_output")
+@patch("src.session_manager.subprocess.Popen")
 @patch("src.executor.asyncio.create_subprocess_exec")
-def test_new_session_includes_full_history(mock_exec, mock_check_output):
+def test_new_session_includes_full_history(mock_exec, mock_popen):
     # Mock create-chat to return a specific session ID
-    mock_check_output.return_value = "new-session-id\n"
+    mock_popen.return_value = make_popen_mock("new-session-id")
     
     # Mock executor (relay)
     mock_process = AsyncMock()
@@ -66,11 +67,11 @@ def test_new_session_includes_full_history(mock_exec, mock_check_output):
     assert "--resume" in cmd
     assert "new-session-id" in cmd
 
-@patch("src.session_manager.subprocess.check_output")
+@patch("src.session_manager.subprocess.Popen")
 @patch("src.executor.asyncio.create_subprocess_exec")
-def test_resume_session_includes_only_last_message(mock_exec, mock_check_output):
+def test_resume_session_includes_only_last_message(mock_exec, mock_popen):
     # 1. Create a session first
-    mock_check_output.return_value = "existing-session-id\n"
+    mock_popen.return_value = make_popen_mock("existing-session-id")
     mock_process = AsyncMock()
     mock_process.stdout.read = AsyncMock(side_effect=[b'{"result": "Response 1"}', b""])
     mock_process.returncode = 0

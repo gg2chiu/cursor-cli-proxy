@@ -11,13 +11,32 @@ from src.tool_formatters import format_tool_call_start, format_tool_call_result
 
 class Executor:
     """Responsible for executing CLI commands"""
-    
+
+    async def _terminate_process(self, process, sigterm_timeout: float = 3.0, sigkill_timeout: float = 5.0):
+        """Gracefully terminate a subprocess: SIGTERM first, then SIGKILL as fallback."""
+        if process.returncode is not None:
+            return
+
+        process.terminate()
+        try:
+            await asyncio.wait_for(process.wait(), timeout=sigterm_timeout)
+            return
+        except asyncio.TimeoutError:
+            logger.warning(f"Process {process.pid} did not exit after SIGTERM, sending SIGKILL")
+
+        process.kill()
+        try:
+            await asyncio.wait_for(process.wait(), timeout=sigkill_timeout)
+        except asyncio.TimeoutError:
+            logger.error(f"Process {process.pid} could not be killed after SIGKILL, possible zombie")
+
     async def run_non_stream(self, cmd: List[str], cwd: Optional[str] = None, timeout: float = 300) -> str:
         """Execute command, monitor stdout, return immediately upon receiving valid JSON result"""
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.DEVNULL,
             cwd=cwd,
             limit=1024 * 1024 * 10,  # 10MB
         )
@@ -53,14 +72,7 @@ class Executor:
             logger.warning(f"Process timed out after {timeout}s, terminating...")
             raise RuntimeError(f"CLI execution timed out after {timeout}s")
         finally:
-            # Cleanup: if process is still running, terminate it
-            if process.returncode is None:
-                process.terminate()
-                try:
-                    await asyncio.wait_for(process.wait(), timeout=2.0)
-                except asyncio.TimeoutError:
-                    process.kill()
-                    await process.wait()
+            await self._terminate_process(process)
 
     async def run_stream(self, cmd: List[str], cwd: Optional[str] = None):
         """Execute command and stream stdout"""
@@ -71,6 +83,7 @@ class Executor:
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.DEVNULL,
             cwd=cwd,
             limit=1024 * 1024 * 1, # 1MB
         )
@@ -168,9 +181,17 @@ class Executor:
                 yield line_str
             
         logger.debug(f"Stream finished after {line_count} lines")
-        await process.wait()
+        await self._terminate_process(process)
+
+        if process.returncode is None:
+            logger.warning(f"Process {process.pid} could not be terminated and may still be running")
+            return
+
+        try:
+            stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=2.0)
+        except asyncio.TimeoutError:
+            stderr_data = b""
         
-        if process.returncode != 0:
-            stderr = await process.stderr.read()
-            logger.error(f"Stream command failed with code {process.returncode}: {stderr.decode()}")
-            raise RuntimeError(f"CLI execution failed (code {process.returncode}): {stderr.decode()}")
+        if process.returncode not in (0, -9, -15):
+            logger.error(f"Stream command failed with code {process.returncode}: {stderr_data.decode(errors='replace')}")
+            raise RuntimeError(f"CLI execution failed (code {process.returncode}): {stderr_data.decode(errors='replace')}")

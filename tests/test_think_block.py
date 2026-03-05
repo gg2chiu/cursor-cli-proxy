@@ -9,6 +9,7 @@ import json
 import os
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock, MagicMock
+from tests.conftest import make_popen_mock
 from src.main import app, session_manager, config
 from src.relay import SlashCommandLoader
 
@@ -42,11 +43,11 @@ def clean_storage(tmp_path):
 class TestThinkBlockNonStreaming:
     """Tests for <think> block in non-streaming responses"""
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_think_block_contains_session_id(self, mock_exec, mock_check_output):
+    def test_think_block_contains_session_id(self, mock_exec, mock_popen):
         """Test that the response contains <think> block with session_id"""
-        mock_check_output.return_value = "test-session-123\n"
+        mock_popen.return_value = make_popen_mock("test-session-123")
         
         mock_process = AsyncMock()
         mock_process.stdout.read = AsyncMock(side_effect=[b'{"result": "Hello"}', b""])
@@ -69,11 +70,11 @@ class TestThinkBlockNonStreaming:
         # Verify session_id is in the think block
         assert "Session ID: test-session-123" in content
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_think_block_contains_slash_commands(self, mock_exec, mock_check_output):
+    def test_think_block_contains_slash_commands(self, mock_exec, mock_popen):
         """Test that the response contains <think> block with loaded slash commands"""
-        mock_check_output.return_value = "test-session-456\n"
+        mock_popen.return_value = make_popen_mock("test-session-456")
         
         mock_process = AsyncMock()
         mock_process.stdout.read = AsyncMock(side_effect=[b'{"result": "Hello"}', b""])
@@ -104,11 +105,11 @@ class TestThinkBlockNonStreaming:
         assert "/test" in content
         assert "/deploy" in content
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_think_block_shows_none_when_no_slash_commands(self, mock_exec, mock_check_output):
+    def test_think_block_shows_none_when_no_slash_commands(self, mock_exec, mock_popen):
         """Test that the response shows (none) when no slash commands are loaded"""
-        mock_check_output.return_value = "test-session-789\n"
+        mock_popen.return_value = make_popen_mock("test-session-789")
         
         mock_process = AsyncMock()
         mock_process.stdout.read = AsyncMock(side_effect=[b'{"result": "Hello"}', b""])
@@ -132,11 +133,11 @@ class TestThinkBlockNonStreaming:
         # When no entries loaded, should show (none)
         assert "Available Commands: (none)" in content
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_actual_response_follows_think_block(self, mock_exec, mock_check_output):
+    def test_actual_response_follows_think_block(self, mock_exec, mock_popen):
         """Test that the actual response content follows the <think> block"""
-        mock_check_output.return_value = "test-session-abc\n"
+        mock_popen.return_value = make_popen_mock("test-session-abc")
         
         mock_process = AsyncMock()
         mock_process.stdout.read = AsyncMock(side_effect=[b'{"result": "This is the actual response"}', b""])
@@ -163,11 +164,11 @@ class TestThinkBlockNonStreaming:
 class TestThinkBlockStreaming:
     """Tests for <think> block in streaming responses"""
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_think_block_is_last_chunk_in_stream(self, mock_exec, mock_check_output):
+    def test_think_block_is_last_chunk_in_stream(self, mock_exec, mock_popen):
         """Test that <think> block is sent as the last chunk in streaming response"""
-        mock_check_output.return_value = "stream-session-123\n"
+        mock_popen.return_value = make_popen_mock("stream-session-123")
         
         mock_process = AsyncMock()
         mock_process.stdout = AsyncMock()
@@ -204,11 +205,11 @@ class TestThinkBlockStreaming:
         assert "Session ID: stream-session-123" in last_chunk
         assert "</think>" in last_chunk
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_subsequent_chunks_do_not_contain_think_block(self, mock_exec, mock_check_output):
+    def test_subsequent_chunks_do_not_contain_think_block(self, mock_exec, mock_popen):
         """Test that subsequent chunks do not contain <think> block"""
-        mock_check_output.return_value = "stream-session-456\n"
+        mock_popen.return_value = make_popen_mock("stream-session-456")
         
         mock_process = AsyncMock()
         mock_process.stdout = AsyncMock()
@@ -253,11 +254,11 @@ class TestThinkBlockStreaming:
 class TestThinkBlockOnlyFirstMessage:
     """Tests to verify <think> block only appears in first assistant message (new session only)"""
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_new_session_has_think_block(self, mock_exec, mock_check_output):
+    def test_new_session_has_think_block(self, mock_exec, mock_popen):
         """Test that new session has <think> block at the start"""
-        mock_check_output.return_value = "session-first\n"
+        mock_popen.return_value = make_popen_mock("session-first")
         mock_process1 = AsyncMock()
         mock_process1.stdout.read = AsyncMock(side_effect=[b'{"result": "Response 1"}', b""])
         mock_process1.returncode = 0
@@ -274,12 +275,12 @@ class TestThinkBlockOnlyFirstMessage:
         assert content1.startswith("<think>")
         assert "Session ID: session-first" in content1
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_resumed_session_no_think_block(self, mock_exec, mock_check_output):
+    def test_resumed_session_no_think_block(self, mock_exec, mock_popen):
         """Test that resumed session (is_session_hit=True) does NOT have <think> block"""
         # First request - create new session
-        mock_check_output.return_value = "session-resume-test\n"
+        mock_popen.return_value = make_popen_mock("session-resume-test")
         mock_process1 = AsyncMock()
         mock_process1.stdout.read = AsyncMock(side_effect=[b'{"result": "Response 1"}', b""])
         mock_process1.returncode = 0
@@ -326,11 +327,11 @@ class TestThinkBlockOnlyFirstMessage:
         assert not content2.startswith("<think>")
         assert "<think>" not in content2
     
-    @patch("src.session_manager.subprocess.check_output")
+    @patch("src.session_manager.subprocess.Popen")
     @patch("src.executor.asyncio.create_subprocess_exec")
-    def test_think_block_only_at_response_start(self, mock_exec, mock_check_output):
+    def test_think_block_only_at_response_start(self, mock_exec, mock_popen):
         """Test that <think> block only appears at the very start of response, not in the middle"""
-        mock_check_output.return_value = "test-session-xyz\n"
+        mock_popen.return_value = make_popen_mock("test-session-xyz")
         
         mock_process = AsyncMock()
         # Simulate a response that might contain <think> text naturally

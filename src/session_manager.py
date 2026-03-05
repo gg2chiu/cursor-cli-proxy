@@ -4,12 +4,15 @@ import uuid
 import os
 import re
 import subprocess
+import threading
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timezone
 from filelock import FileLock, Timeout
 from loguru import logger
 from src.config import config
 from src.models import Message
+
+CREATE_CHAT_READLINE_TIMEOUT = 30
 
 class SessionManager:
     def __init__(self, storage_path: str = "sessions.json", workspace_base: Optional[str] = None):
@@ -171,8 +174,43 @@ class SessionManager:
                 "--sandbox", "enabled"
             ]
             
-            output = subprocess.check_output(cmd, text=True).strip()
-            session_id = output
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
+            pre_terminate_code = None
+            try:
+                result_container = []
+
+                def _read_first_line():
+                    line = proc.stdout.readline()
+                    if line:
+                        result_container.append(line.strip())
+
+                reader = threading.Thread(target=_read_first_line, daemon=True)
+                reader.start()
+                reader.join(timeout=CREATE_CHAT_READLINE_TIMEOUT)
+
+                if reader.is_alive():
+                    raise subprocess.TimeoutExpired(cmd, CREATE_CHAT_READLINE_TIMEOUT)
+
+                first_line = result_container[0] if result_container else ""
+                pre_terminate_code = proc.poll()
+            finally:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait()
+            
+            if pre_terminate_code is not None and pre_terminate_code != 0:
+                stderr_output = proc.stderr.read() if proc.stderr else ""
+                raise subprocess.CalledProcessError(
+                    pre_terminate_code, cmd, output=first_line, stderr=stderr_output
+                )
+
+            if not first_line:
+                raise subprocess.CalledProcessError(1, cmd, output="", stderr="No output from create-chat")
+            
+            session_id = first_line
             
             # If using temp directory, rename to session_id folder
             if temp_dir:
@@ -207,11 +245,16 @@ class SessionManager:
             
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to create cursor-agent session: {e}")
-            # Cleanup temp_dir if it exists (only for non-custom workspace)
             if temp_dir and os.path.exists(temp_dir):
                 import shutil
                 shutil.rmtree(temp_dir)
             raise RuntimeError(f"Failed to create session: {e}")
+        except subprocess.TimeoutExpired as e:
+            logger.error(f"create-chat timed out after {e.timeout}s")
+            if temp_dir and os.path.exists(temp_dir):
+                import shutil
+                shutil.rmtree(temp_dir)
+            raise RuntimeError(f"Session creation timed out after {e.timeout}s")
         except FileNotFoundError:
             from src.config import CURSOR_BIN
             logger.error(f"cursor-agent binary not found at {CURSOR_BIN}")

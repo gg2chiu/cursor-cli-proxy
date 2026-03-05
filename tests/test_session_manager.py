@@ -2,6 +2,7 @@ import pytest
 import os
 import json
 from unittest.mock import patch, MagicMock
+from conftest import make_popen_mock
 from src.session_manager import SessionManager
 from src.models import Message
 
@@ -47,9 +48,9 @@ def test_calculate_history_hash_strips_think_block(session_manager):
 
     assert h1 == h2
 
-@patch("subprocess.check_output")
+@patch("subprocess.Popen")
 def test_create_session(mock_subprocess, session_manager):
-    mock_subprocess.return_value = "test-uuid-1234\n"
+    mock_subprocess.return_value = make_popen_mock("test-uuid-1234")
     
     history_hash = "some_hash"
     session_id = session_manager.create_session(history_hash, title="Test Chat")
@@ -104,6 +105,42 @@ def test_storage_failure(session_manager):
         with pytest.raises(RuntimeError) as excinfo:
             session_manager.save_session("h", {})
         assert "Storage error" in str(excinfo.value)
+
+@patch("subprocess.Popen")
+@patch("src.session_manager.CREATE_CHAT_READLINE_TIMEOUT", 0.5)
+def test_create_session_readline_timeout(mock_subprocess, session_manager):
+    """create_session raises RuntimeError and cleans up when readline() hangs."""
+    import threading
+
+    block = threading.Event()
+    mock_proc = MagicMock()
+
+    def blocking_readline():
+        block.wait()
+        return ""
+    mock_proc.stdout.readline.side_effect = blocking_readline
+    mock_proc.wait.return_value = None
+    mock_proc.returncode = None
+    mock_subprocess.return_value = mock_proc
+
+    try:
+        with pytest.raises(RuntimeError, match="timed out"):
+            session_manager.create_session("timeout_hash", title="Timeout Test")
+
+        mock_proc.terminate.assert_called()
+    finally:
+        block.set()
+
+@patch("subprocess.Popen")
+def test_create_session_nonzero_exit_raises(mock_subprocess, session_manager):
+    """create_session raises RuntimeError when process exits with non-zero code, even if it output text."""
+    mock_subprocess.return_value = make_popen_mock("garbage-not-a-uuid", poll_returncode=1)
+
+    with pytest.raises(RuntimeError, match="Failed to create session"):
+        session_manager.create_session("fail_hash", title="Failing Chat")
+
+    data = session_manager.load_sessions()
+    assert "fail_hash" not in data["sessions"]
 
 from filelock import Timeout
 def test_lock_timeout(session_manager):

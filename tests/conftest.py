@@ -1,8 +1,23 @@
 import pytest
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from src.models import ChatCompletionRequest, Message
 from src.model_registry import model_registry
+
+
+def make_popen_mock(session_id: str, poll_returncode=None) -> MagicMock:
+    """Create a mock subprocess.Popen that simulates cursor-agent create-chat.
+
+    Args:
+        poll_returncode: Value returned by poll() before we terminate the process.
+            None means the process is still running (normal success case).
+            A positive int (e.g. 1) means the process already exited with an error.
+    """
+    mock = MagicMock()
+    mock.stdout.readline.return_value = f"{session_id}\n"
+    mock.wait.return_value = None
+    mock.poll.return_value = poll_returncode
+    return mock
 
 @pytest.fixture(autouse=True)
 def reset_registry(tmp_path):

@@ -18,34 +18,10 @@
     "name": "Composer 1"
   },
   {
-    "id": "gpt-5.3-codex",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "GPT-5.3 Codex"
-  },
-  {
     "id": "gpt-5.3-codex-low",
     "object": "model",
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex Low"
-  },
-  {
-    "id": "gpt-5.3-codex-high",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "GPT-5.3 Codex High"
-  },
-  {
-    "id": "gpt-5.3-codex-xhigh",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "GPT-5.3 Codex Extra High"
-  },
-  {
-    "id": "gpt-5.3-codex-fast",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "GPT-5.3 Codex Fast"
   },
   {
     "id": "gpt-5.3-codex-low-fast",
@@ -54,10 +30,34 @@
     "name": "GPT-5.3 Codex Low Fast"
   },
   {
+    "id": "gpt-5.3-codex",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.3 Codex"
+  },
+  {
+    "id": "gpt-5.3-codex-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.3 Codex Fast"
+  },
+  {
+    "id": "gpt-5.3-codex-high",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.3 Codex High"
+  },
+  {
     "id": "gpt-5.3-codex-high-fast",
     "object": "model",
     "owned_by": "cursor",
     "name": "GPT-5.3 Codex High Fast"
+  },
+  {
+    "id": "gpt-5.3-codex-xhigh",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.3 Codex Extra High"
   },
   {
     "id": "gpt-5.3-codex-xhigh-fast",
@@ -72,16 +72,10 @@
     "name": "GPT-5.2"
   },
   {
-    "id": "gpt-5.2-codex",
+    "id": "gpt-5.3-codex-spark-preview",
     "object": "model",
     "owned_by": "cursor",
-    "name": "GPT-5.2 Codex"
-  },
-  {
-    "id": "gpt-5.2-codex-high",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "GPT-5.2 Codex High"
+    "name": "GPT-5.3 Codex Spark"
   },
   {
     "id": "gpt-5.2-codex-low",
@@ -90,10 +84,16 @@
     "name": "GPT-5.2 Codex Low"
   },
   {
-    "id": "gpt-5.2-codex-xhigh",
+    "id": "gpt-5.2-codex-low-fast",
     "object": "model",
     "owned_by": "cursor",
-    "name": "GPT-5.2 Codex Extra High"
+    "name": "GPT-5.2 Codex Low Fast"
+  },
+  {
+    "id": "gpt-5.2-codex",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.2 Codex"
   },
   {
     "id": "gpt-5.2-codex-fast",
@@ -102,16 +102,22 @@
     "name": "GPT-5.2 Codex Fast"
   },
   {
+    "id": "gpt-5.2-codex-high",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.2 Codex High"
+  },
+  {
     "id": "gpt-5.2-codex-high-fast",
     "object": "model",
     "owned_by": "cursor",
     "name": "GPT-5.2 Codex High Fast"
   },
   {
-    "id": "gpt-5.2-codex-low-fast",
+    "id": "gpt-5.2-codex-xhigh",
     "object": "model",
     "owned_by": "cursor",
-    "name": "GPT-5.2 Codex Low Fast"
+    "name": "GPT-5.2 Codex Extra High"
   },
   {
     "id": "gpt-5.2-codex-xhigh-fast",
@@ -144,6 +150,18 @@
     "name": "GPT-5.2 High"
   },
   {
+    "id": "sonnet-4.6",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Claude 4.6 Sonnet"
+  },
+  {
+    "id": "sonnet-4.6-thinking",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Claude 4.6 Sonnet (Thinking)"
+  },
+  {
     "id": "opus-4.6",
     "object": "model",
     "owned_by": "cursor",
@@ -162,16 +180,16 @@
     "name": "Claude 4.5 Opus (Thinking)"
   },
   {
-    "id": "sonnet-4.6",
+    "id": "gemini-3.1-pro",
     "object": "model",
     "owned_by": "cursor",
-    "name": "Claude 4.6 Sonnet"
+    "name": "Gemini 3.1 Pro"
   },
   {
-    "id": "sonnet-4.6-thinking",
+    "id": "grok",
     "object": "model",
     "owned_by": "cursor",
-    "name": "Claude 4.6 Sonnet (Thinking)"
+    "name": "Grok"
   },
   {
     "id": "sonnet-4.5",
@@ -192,12 +210,6 @@
     "name": "GPT-5.1 High"
   },
   {
-    "id": "gemini-3.1-pro",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Gemini 3.1 Pro"
-  },
-  {
     "id": "gemini-3-pro",
     "object": "model",
     "owned_by": "cursor",
@@ -214,12 +226,6 @@
     "object": "model",
     "owned_by": "cursor",
     "name": "GPT-5.1 Codex Mini"
-  },
-  {
-    "id": "grok",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Grok"
   },
   {
     "id": "kimi-k2.5",

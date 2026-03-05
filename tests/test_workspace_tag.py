@@ -1,6 +1,7 @@
 import os
 import pytest
 from unittest.mock import patch, MagicMock
+from conftest import make_popen_mock
 from src.config import Settings
 from src.relay import parse_workspace_tag, validate_workspace_path, extract_workspace_from_messages
 from src.models import Message
@@ -258,9 +259,9 @@ class TestSessionManagerCustomWorkspace:
         workspace_base = tmp_path / "workspaces"
         return SessionManager(str(storage), workspace_base=str(workspace_base))
     
-    @patch("subprocess.check_output")
+    @patch("subprocess.Popen")
     def test_create_session_with_custom_workspace(self, mock_subprocess, session_manager, tmp_path):
-        mock_subprocess.return_value = "test-uuid-custom\n"
+        mock_subprocess.return_value = make_popen_mock("test-uuid-custom")
         
         custom_ws = tmp_path / "custom_workspace"
         history_hash = "custom_hash"
@@ -289,9 +290,9 @@ class TestSessionManagerCustomWorkspace:
         ws_index = cmd.index("--workspace")
         assert str(custom_ws) in cmd[ws_index + 1]
     
-    @patch("subprocess.check_output")
+    @patch("subprocess.Popen")
     def test_create_session_without_custom_workspace(self, mock_subprocess, session_manager, tmp_path):
-        mock_subprocess.return_value = "test-uuid-default\n"
+        mock_subprocess.return_value = make_popen_mock("test-uuid-default")
         
         history_hash = "default_hash"
         session_id = session_manager.create_session(
