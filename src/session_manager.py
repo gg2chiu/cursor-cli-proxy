@@ -68,12 +68,11 @@ class SessionManager:
                 "content": d.get("content")
             }
             if clean_msg["role"] == "assistant" and isinstance(clean_msg["content"], str):
-                # Normalize whitespace (both leading and trailing) and strip leading <think> block (if present).
-                # Using strip() instead of lstrip() to handle trailing whitespace that clients may trim.
-                content = clean_msg["content"].strip()
-                if content.startswith("<think>"):
-                    content = re.sub(r'^<think>.*?</think>\s*', '', content, flags=re.DOTALL)
-                clean_msg["content"] = content
+                # Strip ALL <think>...</think> blocks regardless of position.
+                # In streaming mode the think block is appended at the end;
+                # in non-streaming mode it is prepended at the start.
+                content = re.sub(r'<think>.*?</think>', '', clean_msg["content"], flags=re.DOTALL)
+                clean_msg["content"] = content.strip()
             canonical_messages.append(clean_msg)
 
         # Serialize with sorted keys and minimal separators
