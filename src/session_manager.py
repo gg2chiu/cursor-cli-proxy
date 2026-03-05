@@ -3,6 +3,7 @@ import hashlib
 import uuid
 import os
 import re
+import signal
 import subprocess
 import threading
 from typing import List, Dict, Optional, Any
@@ -175,7 +176,6 @@ class SessionManager:
             ]
             
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
-            pre_terminate_code = None
             try:
                 result_container = []
 
@@ -192,7 +192,6 @@ class SessionManager:
                     raise subprocess.TimeoutExpired(cmd, CREATE_CHAT_READLINE_TIMEOUT)
 
                 first_line = result_container[0] if result_container else ""
-                pre_terminate_code = proc.poll()
             finally:
                 proc.terminate()
                 try:
@@ -200,11 +199,20 @@ class SessionManager:
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     proc.wait()
-            
-            if pre_terminate_code is not None and pre_terminate_code != 0:
+
+            # proc.returncode is always set after wait(). Exclude exit codes
+            # caused by our own terminate()/kill(): negative signal numbers
+            # (Python convention) and 128+signal (shell convention).
+            _SIGNAL_EXIT_CODES = {
+                -signal.SIGTERM, -signal.SIGKILL,
+                128 + signal.SIGTERM, 128 + signal.SIGKILL,
+            }
+            if (proc.returncode is not None
+                    and proc.returncode != 0
+                    and proc.returncode not in _SIGNAL_EXIT_CODES):
                 stderr_output = proc.stderr.read() if proc.stderr else ""
                 raise subprocess.CalledProcessError(
-                    pre_terminate_code, cmd, output=first_line, stderr=stderr_output
+                    proc.returncode, cmd, output=first_line, stderr=stderr_output
                 )
 
             if not first_line:

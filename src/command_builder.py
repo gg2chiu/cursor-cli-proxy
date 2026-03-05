@@ -144,7 +144,6 @@ class CommandBuilder:
             CURSOR_BIN,
             "--model", self.model,
             "--api-key", self.api_key,
-            "--sandbox", "enabled",
             "--approve-mcps",
             "--force", # "approve-mcps" has a bug. We still need the "force" option to run the MCP tools.
             "--print",

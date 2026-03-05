@@ -12,8 +12,6 @@ def test_build_command_basic():
     assert "auto" in cmd
     assert "--api-key" in cmd
     assert "sk-test" in cmd
-    assert "--sandbox" in cmd
-    assert "enabled" in cmd
     assert "--print" in cmd
     assert "hello" in cmd[-1]
 
@@ -24,8 +22,6 @@ def test_build_command_with_workspace():
     
     assert "--workspace" in cmd
     assert "/tmp/ws" in cmd
-    assert "--sandbox" in cmd
-    assert "enabled" in cmd
 
 def test_system_message_merge():
     messages = [

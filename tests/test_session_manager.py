@@ -142,6 +142,28 @@ def test_create_session_nonzero_exit_raises(mock_subprocess, session_manager):
     data = session_manager.load_sessions()
     assert "fail_hash" not in data["sessions"]
 
+@patch("subprocess.Popen")
+def test_create_session_detects_error_when_poll_returns_none(mock_subprocess, session_manager):
+    """Error must be detected even when poll() returns None (process still running at poll time)."""
+    mock_proc = MagicMock()
+    mock_proc.stdout.readline.return_value = "bad-output\n"
+    mock_proc.poll.return_value = None
+    mock_proc.returncode = None
+    mock_proc.stderr.read.return_value = "internal error"
+
+    def wait_side_effect(*args, **kwargs):
+        mock_proc.returncode = 1
+        return 1
+
+    mock_proc.wait.side_effect = wait_side_effect
+    mock_subprocess.return_value = mock_proc
+
+    with pytest.raises(RuntimeError, match="Failed to create session"):
+        session_manager.create_session("error_hash", title="Error Chat")
+
+    data = session_manager.load_sessions()
+    assert "error_hash" not in data["sessions"]
+
 from filelock import Timeout
 def test_lock_timeout(session_manager):
     # Simulate lock timeout
