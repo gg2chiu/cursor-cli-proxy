@@ -4,6 +4,7 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
+    git \
     ca-certificates \
     jq \
     && rm -rf /var/lib/apt/lists/*
