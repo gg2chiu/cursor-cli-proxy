@@ -20,14 +20,23 @@ config.validate()
 # Initialize SessionManager
 session_manager = SessionManager()
 
-async def verify_auth(authorization: str = Header(None)):
-    if not authorization:
-        if config.CURSOR_KEY:
-            return config.CURSOR_KEY
-        raise HTTPException(status_code=401, detail="Missing authentication header")
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid authentication header")
-    return authorization.split(" ")[1]
+async def verify_auth(authorization: str = Header(None)) -> str:
+    """Resolve API key: use CURSOR_KEY if set, otherwise require valid Bearer token."""
+    if config.CURSOR_KEY:
+        return config.CURSOR_KEY
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authentication header")
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing API key in Bearer token")
+    return token
+
+def _build_think_block(builder: CommandBuilder, session_id: str) -> str:
+    """Build think block with session info and available commands."""
+    command_labels = builder.slash_loader.get_command_labels()
+    commands_str = "\n" + "\n".join(command_labels) if command_labels else "(none)"
+    return f"<think>\nSession ID: {session_id}\nAvailable Commands: {commands_str}\n</think>\n\n"
+
 
 @app.get("/v1/models", response_model=ModelList)
 async def list_models(api_key: str = Depends(verify_auth)):
@@ -113,13 +122,7 @@ async def chat_completions(
         cmd = builder.build(stream=request.stream)
         
         executor = Executor()
-        
-        # Build think block with session_id and loaded slash commands (only for new sessions, if enabled)
-        think_block = ""
-        if config.ENABLE_INFO_IN_THINK and not is_session_hit:
-            command_labels = builder.slash_loader.get_command_labels()
-            commands_str = "\n" + "\n".join(command_labels) if command_labels else "(none)"
-            think_block = f"<think>\nSession ID: {session_id}\nAvailable Commands: {commands_str}\n</think>\n\n"
+        should_add_think = config.ENABLE_INFO_IN_THINK and not is_session_hit
         
         if request.stream:
             async def event_generator():
@@ -144,8 +147,11 @@ async def chat_completions(
                         )
                         yield f"data: {chunk_data.model_dump_json(exclude_none=True)}\n\n"
 
-                    # Send think block as the last chunk (only for new sessions)
-                    if think_block:
+                    if not full_content:
+                        logger.warning("Stream produced no output from executor")
+                        return
+
+                    if should_add_think:
                         think_chunk = ChatCompletionChunk(
                             id=req_id,
                             created=created,
@@ -153,7 +159,7 @@ async def chat_completions(
                             choices=[
                                 ChunkChoice(
                                     index=0,
-                                    delta=ChunkDelta(content=think_block)
+                                    delta=ChunkDelta(content=_build_think_block(builder, session_id))
                                 )
                             ]
                         )
@@ -194,9 +200,8 @@ async def chat_completions(
             return StreamingResponse(event_generator(), media_type="text/event-stream")
         else:
             content = await executor.run_non_stream(cmd, cwd=workspace_dir)
-            
-            # Prepend think block to content (only for new sessions)
-            content_with_think = think_block + content if think_block else content
+            think_block = _build_think_block(builder, session_id) if (should_add_think and content) else ""
+            content_with_think = (think_block or "") + content
             
             # Update Session Hash (use original hash for custom session_id)
             new_history = cleaned_messages + [Message(role="assistant", content=content)]

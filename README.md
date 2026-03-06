@@ -299,7 +299,7 @@ Content-Type: application/json
 **Request Body**:
 ```json
 {
-  "model": "claude-3.5-sonnet",
+  "model": "composer-1.5",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant."},
     {"role": "user", "content": "Hello, how are you?"}
@@ -314,7 +314,7 @@ Content-Type: application/json
   "id": "chatcmpl-...",
   "object": "chat.completion",
   "created": 1234567890,
-  "model": "claude-3.5-sonnet",
+  "model": "composer-1.5",
   "choices": [
     {
       "index": 0,
@@ -330,9 +330,9 @@ Content-Type: application/json
 
 **Streaming Response** (when `stream: true`):
 ```
-data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1234567890,"model":"claude-3.5-sonnet","choices":[{"index":0,"delta":{"content":"Hello"}}]}
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1234567890,"model":"composer-1.5","choices":[{"index":0,"delta":{"content":"Hello"}}]}
 
-data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1234567890,"model":"claude-3.5-sonnet","choices":[{"index":0,"delta":{"content":"!"}}]}
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1234567890,"model":"composer-1.5","choices":[{"index":0,"delta":{"content":"!"}}]}
 
 data: [DONE]
 ```
@@ -354,7 +354,7 @@ Authorization: Bearer YOUR_CURSOR_API_KEY
   "object": "list",
   "data": [
     {
-      "id": "claude-3.5-sonnet",
+      "id": "composer-1.5",
       "object": "model",
       "created": 1234567890,
       "owned_by": "cursor"
@@ -426,7 +426,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="claude-3.5-sonnet",
+    model="composer-1.5",
     messages=[
         {"role": "user", "content": "Hello!"}
     ]
@@ -446,7 +446,7 @@ const client = new OpenAI({
 });
 
 const response = await client.chat.completions.create({
-  model: 'claude-3.5-sonnet',
+  model: 'composer-1.5',
   messages: [
     { role: 'user', content: 'Hello!' }
   ],
@@ -462,7 +462,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer your-cursor-api-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-3.5-sonnet",
+    "model": "composer-1.5",
     "messages": [
       {"role": "user", "content": "Hello!"}
     ],
