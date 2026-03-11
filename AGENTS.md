@@ -37,6 +37,16 @@ This file provides instructions and guidelines for AI agents working on this cod
 - **Test Location**: Place tests in `tests/` directory with `test_` prefix
 - **Test Naming**: Use descriptive names like `test_session_manager_creates_new_session`
 
+### Integration Test Requirements (Tests Using FastAPI `TestClient`)
+
+**IMPORTANT**: Any test file that uses `TestClient(app)` to hit the `/v1/chat/completions` endpoint MUST include these safeguards to avoid spawning real `cursor-agent` subprocesses (which make tests ~15x slower):
+
+1. **Isolate session storage** — Redirect `session_manager` to a `tmp_path`-based storage so tests don't share or pollute the real `sessions.json`.
+2. **Mock `subprocess.Popen`** — Patch `src.session_manager.subprocess.Popen` using `make_popen_mock` from `tests/conftest.py` so `SessionManager.create_session` never spawns a real process.
+3. **Mock `Executor`** — Patch `Executor.run_non_stream` / `Executor.run_stream` so the CLI binary is never invoked during tests.
+
+Refer to `tests/test_think_block.py` or `tests/test_history_inclusion.py` for canonical examples.
+
 ## Python Environment
 
 ### Virtual Environment (venv)

@@ -6,20 +6,20 @@ services:
       - "${PORT:-8000}:8000"
     environment:
       # Configuration variables from README.md
-      - CURSOR_KEY=${CURSOR_KEY:-""}
+      - CURSOR_KEY=${CURSOR_KEY:-}
       - HOST=${HOST:-0.0.0.0}
       - PORT=${PORT:-8000}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENABLE_INFO_IN_THINK=${ENABLE_INFO_IN_THINK:-false}
       - ENABLE_SKILLS_IN_PROMPT=${ENABLE_SKILLS_IN_PROMPT:-false}
-      - WORKSPACE_WHITELIST_1=${WORKSPACE_WHITELIST_1:-""}
-      - WORKSPACE_WHITELIST_2=${WORKSPACE_WHITELIST_2:-""}
-      - WORKSPACE_WHITELIST_3=${WORKSPACE_WHITELIST_3:-""}
-      - WORKSPACE_WHITELIST_4=${WORKSPACE_WHITELIST_4:-""}
-      - WORKSPACE_WHITELIST_5=${WORKSPACE_WHITELIST_5:-""}
+      - WORKSPACE_WHITELIST_1=${WORKSPACE_WHITELIST_1:-}
+      - WORKSPACE_WHITELIST_2=${WORKSPACE_WHITELIST_2:-}
+      - WORKSPACE_WHITELIST_3=${WORKSPACE_WHITELIST_3:-}
+      - WORKSPACE_WHITELIST_4=${WORKSPACE_WHITELIST_4:-}
+      - WORKSPACE_WHITELIST_5=${WORKSPACE_WHITELIST_5:-}
     volumes:
       # Session persistence
-      - ./sessions.json:/app/sessions.json:rw
+      # - ./sessions.json:/app/sessions.json:rw
       # Models persistence
       - ./models.json:/app/models.json:rw
       # Workspace mounts (uncomment and set paths as needed)
@@ -29,3 +29,9 @@ services:
       # - ${WORKSPACE_WHITELIST_4}:${WORKSPACE_WHITELIST_4}:rw
       # - ${WORKSPACE_WHITELIST_5}:${WORKSPACE_WHITELIST_5}:rw
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-8000}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

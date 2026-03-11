@@ -8,6 +8,7 @@ from src.slash_command_loader import SlashCommandLoader
 from src.config import config, logger
 from src.model_registry import model_registry, ModelRegistry
 from src.session_manager import SessionManager
+import shutil
 import time
 import uuid
 import json
@@ -17,13 +18,17 @@ app = FastAPI(title="Cursor CLI Proxy")
 # Ensure config validation
 config.validate()
 
+# Initialize ModelRegistry (load from cache file or use defaults)
+model_registry.initialize()
+
 # Initialize SessionManager
 session_manager = SessionManager()
 
 async def verify_auth(authorization: str = Header(None)) -> str:
     """Resolve API key: use CURSOR_KEY if set, otherwise require valid Bearer token."""
-    if config.CURSOR_KEY:
-        return config.CURSOR_KEY
+    cursor_key = (config.CURSOR_KEY or "").strip().strip("'\"")
+    if cursor_key:
+        return cursor_key
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid authentication header")
     token = authorization.split(" ", 1)[1].strip()
@@ -36,6 +41,25 @@ def _build_think_block(builder: CommandBuilder, session_id: str) -> str:
     command_labels = builder.slash_loader.get_command_labels()
     commands_str = "\n" + "\n".join(command_labels) if command_labels else "(none)"
     return f"<think>\nSession ID: {session_id}\nAvailable Commands: {commands_str}\n</think>\n\n"
+
+
+def _check_session_storage() -> bool:
+    try:
+        session_manager.load_sessions()
+        return True
+    except Exception:
+        return False
+
+
+@app.get("/health")
+async def health():
+    checks = {
+        "cursor_agent": shutil.which("cursor-agent") is not None,
+        "model_registry": model_registry._models is not None,
+        "session_storage": _check_session_storage(),
+    }
+    status = "healthy" if all(checks.values()) else "degraded"
+    return {"status": status, "checks": checks}
 
 
 @app.get("/v1/models", response_model=ModelList)

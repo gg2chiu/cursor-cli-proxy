@@ -1,14 +1,40 @@
 import json
-from unittest.mock import AsyncMock, patch
+import os
+from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
+from filelock import FileLock
 from fastapi.testclient import TestClient
 
-from src.main import app, config
+from src.main import app, config, session_manager
+from src.model_registry import model_registry
 from src.relay import Executor
 from src.slash_command_loader import SlashCommandLoader
+from tests.conftest import make_popen_mock
 
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def isolated_session_storage(tmp_path):
+    """Isolate session storage and mock subprocess.Popen to avoid real cursor-agent calls."""
+    storage_file = tmp_path / "test_sessions.json"
+    lock_file = tmp_path / "test_sessions.json.lock"
+    session_manager.storage_path = str(storage_file)
+    session_manager.lock_path = str(lock_file)
+    session_manager.workspace_base = str(tmp_path / "workspaces")
+    session_manager.lock = FileLock(session_manager.lock_path)
+    session_manager._ensure_storage_exists()
+    yield
+    for f in [str(storage_file), str(lock_file)]:
+        if os.path.exists(f):
+            os.remove(f)
+
+@pytest.fixture(autouse=True)
+def mock_create_chat():
+    """Mock subprocess.Popen so create_session never spawns a real cursor-agent process."""
+    with patch("src.session_manager.subprocess.Popen") as mock_popen:
+        mock_popen.return_value = make_popen_mock("mock-session-id")
+        yield mock_popen
 
 @pytest.fixture(autouse=True)
 def disable_think_block():
@@ -91,6 +117,29 @@ def test_no_cursor_key_empty_bearer_rejected():
             "/v1/chat/completions",
             json={"model": "auto", "messages": [{"role": "user", "content": "hi"}]},
             headers={"Authorization": "Bearer "}
+        )
+        assert response.status_code == 401
+
+
+def test_cursor_key_literal_quotes_treated_as_unset():
+    """When CURSOR_KEY is '""' (literal quotes from docker-compose default), it should be treated as unset."""
+    with patch("src.relay.Executor.run_non_stream", new_callable=AsyncMock) as mock_run:
+        mock_run.return_value = "Hello world"
+        with patch.object(config, 'CURSOR_KEY', '""'):
+            response = client.post(
+                "/v1/chat/completions",
+                json={"model": "auto", "messages": [{"role": "user", "content": "hi"}]},
+                headers={"Authorization": "Bearer user-provided-key"}
+            )
+            assert response.status_code == 200
+
+
+def test_cursor_key_literal_quotes_no_bearer_rejected():
+    """When CURSOR_KEY is '""' and no Bearer token, should reject (not use '""' as key)."""
+    with patch.object(config, 'CURSOR_KEY', '""'):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": "auto", "messages": [{"role": "user", "content": "hi"}]}
         )
         assert response.status_code == 401
 
@@ -181,3 +230,24 @@ def test_think_block_built_only_when_content_present():
                 headers={"Authorization": "Bearer sk-test"}
             )
         assert len(build_calls) == 1, "get_command_labels should be called when executor returns content"
+
+
+def test_health_endpoint_all_healthy():
+    """After initialization, all checks should pass."""
+    model_registry.initialize()
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert data["checks"]["cursor_agent"] is True
+    assert data["checks"]["model_registry"] is True
+    assert data["checks"]["session_storage"] is True
+
+
+def test_health_endpoint_degraded_when_cursor_agent_missing():
+    with patch("shutil.which", return_value=None):
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "degraded"
+        assert data["checks"]["cursor_agent"] is False

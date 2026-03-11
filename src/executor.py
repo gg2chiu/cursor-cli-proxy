@@ -192,6 +192,6 @@ class Executor:
         except asyncio.TimeoutError:
             stderr_data = b""
         
-        if process.returncode not in (0, -9, -15):
+        if process.returncode not in (0, -9, -15, 137, 143):
             logger.error(f"Stream command failed with code {process.returncode}: {stderr_data.decode(errors='replace')}")
             raise RuntimeError(f"CLI execution failed (code {process.returncode}): {stderr_data.decode(errors='replace')}")
