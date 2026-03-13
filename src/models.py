@@ -111,6 +111,52 @@ def _extract_text_from_response_content(content: Any) -> str:
     return str(content)
 
 
+def _response_content_to_internal(content: Any) -> Union[str, List[ContentPart]]:
+    """Convert Responses API content to internal Message content format.
+
+    Preserves multimodal parts (input_image -> ImageContentPart) so the
+    CommandBuilder can save images to temp files.  Falls back to plain text
+    when there are no image/file parts.
+    """
+    if isinstance(content, str):
+        return content
+
+    if not isinstance(content, list):
+        return str(content)
+
+    has_multimodal = any(
+        isinstance(p, dict) and p.get("type") in ("input_image", "image_url", "input_file")
+        for p in content
+    )
+
+    if not has_multimodal:
+        return _extract_text_from_response_content(content)
+
+    parts: List[ContentPart] = []
+    for part in content:
+        if not isinstance(part, dict):
+            continue
+        ptype = part.get("type", "")
+        if ptype in ("input_text", "text"):
+            parts.append(TextContentPart(type="text", text=part.get("text", "")))
+        elif ptype in ("input_image", "image_url"):
+            url = part.get("image_url", "") or part.get("url", "")
+            if isinstance(url, dict):
+                url = url.get("url", "")
+            parts.append(ImageContentPart(
+                type="image_url",
+                image_url=ImageUrlDetail(url=url),
+            ))
+        elif ptype == "input_file":
+            file_data = part.get("file_data", "")
+            fname = part.get("filename", "uploaded_file")
+            parts.append(TextContentPart(
+                type="text",
+                text=f"[File: {fname}]\n{file_data}" if file_data else f"[File: {fname}]",
+            ))
+    return parts if parts else _extract_text_from_response_content(content)
+
+
 def _input_item_to_message(item: dict) -> Optional[Message]:
     """Convert a Responses API input item dict to an internal Message, or None if not convertible."""
     role = item.get("role")
@@ -122,8 +168,8 @@ def _input_item_to_message(item: dict) -> Optional[Message]:
     internal_role = "system" if role == "developer" else role
     if internal_role not in ("system", "user", "assistant"):
         return None
-    text = _extract_text_from_response_content(content)
-    return Message(role=internal_role, content=text)
+    msg_content = _response_content_to_internal(content)
+    return Message(role=internal_role, content=msg_content)
 
 
 class ResponseCreateRequest(BaseModel):
@@ -169,13 +215,24 @@ class ResponseOutputMessage(BaseModel):
     content: List[ResponseOutputText]
 
 
+class ResponseSummaryText(BaseModel):
+    type: Literal["summary_text"] = "summary_text"
+    text: str
+
+
+class ResponseReasoningItem(BaseModel):
+    id: str
+    type: Literal["reasoning"] = "reasoning"
+    summary: List[ResponseSummaryText] = Field(default_factory=list)
+
+
 class ResponseObject(BaseModel):
     id: str
     object: Literal["response"] = "response"
     created_at: int = Field(default_factory=lambda: int(time.time()))
     status: Literal["completed", "failed", "in_progress", "incomplete"] = "completed"
     model: str
-    output: List[ResponseOutputMessage]
+    output: List[Union[ResponseReasoningItem, ResponseOutputMessage]]
     previous_response_id: Optional[str] = None
     temperature: Optional[float] = 1.0
     max_output_tokens: Optional[int] = None

@@ -8,6 +8,7 @@ from src.models import (
     ChatCompletionRequest, ChatCompletionResponse, Choice, Message,
     ChatCompletionChunk, ChunkChoice, ChunkDelta, ModelList, Model,
     ResponseCreateRequest, ResponseObject, ResponseOutputMessage, ResponseOutputText,
+    ResponseReasoningItem, ResponseSummaryText,
 )
 from src.relay import CommandBuilder, Executor, extract_workspace_from_messages
 from src.slash_command_loader import SlashCommandLoader
@@ -47,6 +48,13 @@ def _build_think_block(builder: CommandBuilder, session_id: str) -> str:
     command_labels = builder.slash_loader.get_command_labels()
     commands_str = "\n" + "\n".join(command_labels) if command_labels else "(none)"
     return f"<think>\nSession ID: {session_id}\nAvailable Commands: {commands_str}\n</think>\n\n"
+
+
+def _build_think_summary_text(builder: CommandBuilder, session_id: str) -> str:
+    """Build plain-text summary for a Responses API reasoning item."""
+    command_labels = builder.slash_loader.get_command_labels()
+    commands_str = "\n" + "\n".join(command_labels) if command_labels else "(none)"
+    return f"Session ID: {session_id}\nAvailable Commands: {commands_str}"
 
 
 def _check_session_storage() -> bool:
@@ -314,22 +322,39 @@ async def create_response(
         if not messages:
             raise HTTPException(status_code=400, detail="input must produce at least one message")
 
-        custom_session_id = request.previous_response_id
+        custom_workspace, tag_session_id, cleaned_messages = extract_workspace_from_messages(messages)
+
+        prev_id = request.previous_response_id
+        prev_session_id = prev_id.removeprefix("resp_") if prev_id else None
+        custom_session_id = prev_session_id or tag_session_id
+
         ctx = _resolve_session_and_build(
-            cleaned_messages=messages,
+            cleaned_messages=cleaned_messages,
             model=model,
             api_key=api_key,
             stream=request.stream,
             custom_session_id=custom_session_id,
+            custom_workspace=custom_workspace,
         )
 
         resp_id = f"resp_{ctx.session_id}"
         msg_id = f"msg_{uuid.uuid4().hex[:24]}"
+        should_add_think = config.ENABLE_INFO_IN_THINK and not ctx.is_session_hit
+
+        reasoning_item: Optional[ResponseReasoningItem] = None
+        if should_add_think:
+            reasoning_item = ResponseReasoningItem(
+                id=f"rs_{uuid.uuid4().hex[:24]}",
+                summary=[ResponseSummaryText(
+                    text=_build_think_summary_text(ctx.builder, ctx.session_id),
+                )],
+            )
 
         if request.stream:
             async def response_event_generator():
                 created_at = int(time.time())
                 full_content: List[str] = []
+                msg_output_index = 0
 
                 # response.created
                 created_resp = ResponseObject(
@@ -344,7 +369,27 @@ async def create_response(
                 )
                 yield f"event: response.created\ndata: {json.dumps({'type': 'response.created', 'response': created_resp.model_dump()})}\n\n"
 
-                # response.output_item.added
+                if reasoning_item:
+                    rs_id = reasoning_item.id
+                    rs_dump = reasoning_item.model_dump()
+                    summary_text = reasoning_item.summary[0].text
+                    summary_part = {"type": "summary_text", "text": ""}
+
+                    yield f"event: response.output_item.added\ndata: {json.dumps({'type': 'response.output_item.added', 'output_index': 0, 'item': rs_dump})}\n\n"
+
+                    yield f"event: response.reasoning_summary_part.added\ndata: {json.dumps({'type': 'response.reasoning_summary_part.added', 'item_id': rs_id, 'output_index': 0, 'summary_index': 0, 'part': summary_part})}\n\n"
+
+                    yield f"event: response.reasoning_summary_text.delta\ndata: {json.dumps({'type': 'response.reasoning_summary_text.delta', 'item_id': rs_id, 'output_index': 0, 'summary_index': 0, 'delta': summary_text})}\n\n"
+
+                    yield f"event: response.reasoning_summary_text.done\ndata: {json.dumps({'type': 'response.reasoning_summary_text.done', 'item_id': rs_id, 'output_index': 0, 'summary_index': 0, 'text': summary_text})}\n\n"
+
+                    yield f"event: response.reasoning_summary_part.done\ndata: {json.dumps({'type': 'response.reasoning_summary_part.done', 'item_id': rs_id, 'output_index': 0, 'summary_index': 0, 'part': {'type': 'summary_text', 'text': summary_text}})}\n\n"
+
+                    yield f"event: response.output_item.done\ndata: {json.dumps({'type': 'response.output_item.done', 'output_index': 0, 'item': rs_dump})}\n\n"
+
+                    msg_output_index = 1
+
+                # response.output_item.added (message)
                 out_msg = {
                     "type": "message",
                     "id": msg_id,
@@ -352,11 +397,11 @@ async def create_response(
                     "role": "assistant",
                     "content": [],
                 }
-                yield f"event: response.output_item.added\ndata: {json.dumps({'type': 'response.output_item.added', 'output_index': 0, 'item': out_msg})}\n\n"
+                yield f"event: response.output_item.added\ndata: {json.dumps({'type': 'response.output_item.added', 'output_index': msg_output_index, 'item': out_msg})}\n\n"
 
                 # response.content_part.added
                 content_part = {"type": "output_text", "text": "", "annotations": []}
-                yield f"event: response.content_part.added\ndata: {json.dumps({'type': 'response.content_part.added', 'item_id': msg_id, 'output_index': 0, 'content_index': 0, 'part': content_part})}\n\n"
+                yield f"event: response.content_part.added\ndata: {json.dumps({'type': 'response.content_part.added', 'item_id': msg_id, 'output_index': msg_output_index, 'content_index': 0, 'part': content_part})}\n\n"
 
                 try:
                     async for chunk in ctx.executor.run_stream(ctx.cmd, cwd=ctx.workspace_dir):
@@ -364,7 +409,7 @@ async def create_response(
                         delta_event = {
                             "type": "response.output_text.delta",
                             "item_id": msg_id,
-                            "output_index": 0,
+                            "output_index": msg_output_index,
                             "content_index": 0,
                             "delta": chunk,
                         }
@@ -376,25 +421,42 @@ async def create_response(
                     text_done = {
                         "type": "response.output_text.done",
                         "item_id": msg_id,
-                        "output_index": 0,
+                        "output_index": msg_output_index,
                         "content_index": 0,
                         "text": full_text,
                     }
                     yield f"event: response.output_text.done\ndata: {json.dumps(text_done)}\n\n"
 
+                    # response.content_part.done
+                    yield f"event: response.content_part.done\ndata: {json.dumps({'type': 'response.content_part.done', 'item_id': msg_id, 'output_index': msg_output_index, 'content_index': 0, 'part': {'type': 'output_text', 'text': full_text, 'annotations': []}})}\n\n"
+
+                    # response.output_item.done (message)
+                    done_msg = {
+                        "type": "message",
+                        "id": msg_id,
+                        "status": "completed",
+                        "role": "assistant",
+                        "content": [{"type": "output_text", "text": full_text, "annotations": []}],
+                    }
+                    yield f"event: response.output_item.done\ndata: {json.dumps({'type': 'response.output_item.done', 'output_index': msg_output_index, 'item': done_msg})}\n\n"
+
                     # response.completed
+                    completed_output: List = []
+                    if reasoning_item:
+                        completed_output.append(reasoning_item)
+                    completed_output.append(
+                        ResponseOutputMessage(
+                            id=msg_id,
+                            status="completed",
+                            content=[ResponseOutputText(text=full_text)],
+                        )
+                    )
                     completed_resp = ResponseObject(
                         id=resp_id,
                         created_at=created_at,
                         status="completed",
                         model=model,
-                        output=[
-                            ResponseOutputMessage(
-                                id=msg_id,
-                                status="completed",
-                                content=[ResponseOutputText(text=full_text)],
-                            )
-                        ],
+                        output=completed_output,
                         previous_response_id=request.previous_response_id,
                         temperature=request.temperature,
                         max_output_tokens=request.max_output_tokens,
@@ -414,16 +476,21 @@ async def create_response(
 
             _update_session_after_response(ctx.cleaned_messages, content, ctx.old_hash)
 
+            output_items: List = []
+            if reasoning_item:
+                output_items.append(reasoning_item)
+            output_items.append(
+                ResponseOutputMessage(
+                    id=msg_id,
+                    status="completed",
+                    content=[ResponseOutputText(text=content)],
+                )
+            )
+
             return ResponseObject(
                 id=resp_id,
                 model=model,
-                output=[
-                    ResponseOutputMessage(
-                        id=msg_id,
-                        status="completed",
-                        content=[ResponseOutputText(text=content)],
-                    )
-                ],
+                output=output_items,
                 previous_response_id=request.previous_response_id,
                 temperature=request.temperature,
                 max_output_tokens=request.max_output_tokens,

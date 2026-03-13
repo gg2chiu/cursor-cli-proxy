@@ -138,16 +138,52 @@
     "name": "GPT-5.1 Codex Max High"
   },
   {
+    "id": "gpt-5.4-high",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.4 High"
+  },
+  {
     "id": "opus-4.6-thinking",
     "object": "model",
     "owned_by": "cursor",
     "name": "Claude 4.6 Opus (Thinking)"
   },
   {
-    "id": "gpt-5.2-high",
+    "id": "gpt-5.4-low",
     "object": "model",
     "owned_by": "cursor",
-    "name": "GPT-5.2 High"
+    "name": "GPT-5.4 Low"
+  },
+  {
+    "id": "gpt-5.4-medium",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.4"
+  },
+  {
+    "id": "gpt-5.4-medium-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.4 Fast"
+  },
+  {
+    "id": "gpt-5.4-high-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.4 High Fast"
+  },
+  {
+    "id": "gpt-5.4-xhigh",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.4 Extra High"
+  },
+  {
+    "id": "gpt-5.4-xhigh-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.4 Extra High Fast"
   },
   {
     "id": "sonnet-4.6",
@@ -178,6 +214,12 @@
     "object": "model",
     "owned_by": "cursor",
     "name": "Claude 4.5 Opus (Thinking)"
+  },
+  {
+    "id": "gpt-5.2-high",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.2 High"
   },
   {
     "id": "gemini-3.1-pro",
