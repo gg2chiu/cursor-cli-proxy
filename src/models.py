@@ -86,3 +86,96 @@ class Model(BaseModel):
 class ModelList(BaseModel):
     object: str = "list"
     data: List[Model]
+
+
+# ── Responses API models ──────────────────────────────────────────────
+
+def _extract_text_from_response_content(content: Any) -> str:
+    """Extract plain text from Responses API content (string, input_text parts, or text parts)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        texts = []
+        for part in content:
+            if isinstance(part, str):
+                texts.append(part)
+            elif isinstance(part, dict):
+                ptype = part.get("type", "")
+                if ptype in ("input_text", "text"):
+                    texts.append(part.get("text", ""))
+                elif ptype == "output_text":
+                    texts.append(part.get("text", ""))
+                elif ptype in ("input_image", "image_url"):
+                    texts.append("[Image]")
+        return "\n".join(texts) if texts else str(content)
+    return str(content)
+
+
+def _input_item_to_message(item: dict) -> Optional[Message]:
+    """Convert a Responses API input item dict to an internal Message, or None if not convertible."""
+    role = item.get("role")
+    if role is None:
+        return None
+    content = item.get("content")
+    if content is None:
+        return None
+    internal_role = "system" if role == "developer" else role
+    if internal_role not in ("system", "user", "assistant"):
+        return None
+    text = _extract_text_from_response_content(content)
+    return Message(role=internal_role, content=text)
+
+
+class ResponseCreateRequest(BaseModel):
+    model: str
+    input: Union[str, List[Any]]
+    instructions: Optional[str] = None
+    previous_response_id: Optional[str] = None
+    stream: bool = False
+    store: Optional[bool] = None
+    temperature: Optional[float] = None
+    max_output_tokens: Optional[int] = None
+
+    model_config = {"extra": "ignore"}
+
+    def to_messages(self) -> List[Message]:
+        msgs: List[Message] = []
+        if self.instructions:
+            msgs.append(Message(role="system", content=self.instructions))
+        if isinstance(self.input, str):
+            msgs.append(Message(role="user", content=self.input))
+        else:
+            for item in self.input:
+                if isinstance(item, dict):
+                    msg = _input_item_to_message(item)
+                    if msg:
+                        msgs.append(msg)
+                elif isinstance(item, str):
+                    msgs.append(Message(role="user", content=item))
+        return msgs
+
+
+class ResponseOutputText(BaseModel):
+    type: Literal["output_text"] = "output_text"
+    text: str
+    annotations: List[Any] = Field(default_factory=list)
+
+
+class ResponseOutputMessage(BaseModel):
+    type: Literal["message"] = "message"
+    id: str
+    status: Literal["in_progress", "completed", "incomplete"] = "completed"
+    role: Literal["assistant"] = "assistant"
+    content: List[ResponseOutputText]
+
+
+class ResponseObject(BaseModel):
+    id: str
+    object: Literal["response"] = "response"
+    created_at: int = Field(default_factory=lambda: int(time.time()))
+    status: Literal["completed", "failed", "in_progress", "incomplete"] = "completed"
+    model: str
+    output: List[ResponseOutputMessage]
+    previous_response_id: Optional[str] = None
+    temperature: Optional[float] = 1.0
+    max_output_tokens: Optional[int] = None

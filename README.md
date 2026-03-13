@@ -4,7 +4,7 @@ A FastAPI-based proxy server that provides an OpenAI-compatible API interface fo
 
 ## Features
 
-- 🔄 **OpenAI API Compatibility**: Drop-in replacement for OpenAI API endpoints
+- 🔄 **OpenAI API Compatibility**: Drop-in replacement for OpenAI Chat Completions and Responses API endpoints
 - 💬 **Intelligent Session Management**: Automatically tracks conversation context using hash-based session matching
 - 🔀 **Streaming Support**: Real-time streaming responses using Server-Sent Events (SSE)
 - 🎯 **Dynamic Model Registry**: Fetch and cache available models from cursor-agent
@@ -256,6 +256,14 @@ data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1234567890
 data: [DONE]
 ```
 
+### Responses API
+
+**Endpoint**: `POST /v1/responses`
+
+An implementation of the [OpenAI Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create), providing the same core text generation capabilities through a modern, agent-oriented interface. The proxy's `session_id` is used as the `response_id` (prefixed with `resp_`), enabling multi-turn conversations via `previous_response_id`.
+
+Note: It doesn't support `ENABLE_INFO_IN_THINK` yet.
+
 ### List Models
 
 **Endpoint**: `GET /v1/models`
@@ -334,6 +342,7 @@ Request → Hash History → Match Found?
 
 ### Python
 
+**Chat Completions**:
 ```python
 from openai import OpenAI
 
@@ -352,8 +361,35 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
+**Responses API**:
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="your-cursor-api-key"
+)
+
+response = client.responses.create(
+    model="composer-1.5",
+    input="Hello!"
+)
+
+print(response.output_text)
+
+# Multi-turn follow-up
+follow_up = client.responses.create(
+    model="composer-1.5",
+    input="Tell me more.",
+    previous_response_id=response.id
+)
+
+print(follow_up.output_text)
+```
+
 ### Node.js
 
+**Chat Completions**:
 ```javascript
 import OpenAI from 'openai';
 
@@ -372,8 +408,26 @@ const response = await client.chat.completions.create({
 console.log(response.choices[0].message.content);
 ```
 
+**Responses API**:
+```javascript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: 'http://localhost:8000/v1',
+  apiKey: 'your-cursor-api-key',
+});
+
+const response = await client.responses.create({
+  model: 'composer-1.5',
+  input: 'Hello!',
+});
+
+console.log(response.output_text);
+```
+
 ### cURL
 
+**Chat Completions**:
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer your-cursor-api-key" \
@@ -383,6 +437,18 @@ curl -X POST http://localhost:8000/v1/chat/completions \
     "messages": [
       {"role": "user", "content": "Hello!"}
     ],
+    "stream": false
+  }'
+```
+
+**Responses API**:
+```bash
+curl -X POST http://localhost:8000/v1/responses \
+  -H "Authorization: Bearer your-cursor-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "composer-1.5",
+    "input": "Hello!",
     "stream": false
   }'
 ```
