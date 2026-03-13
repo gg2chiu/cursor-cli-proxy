@@ -7,7 +7,7 @@ def test_settings_defaults():
     # 確保不受外部環境影響
     with patch.dict(os.environ, {}, clear=True):
         settings = Settings(_env_file=None)
-        assert settings.HOST == "0.0.0.0"
+        assert settings.HOST == "127.0.0.1"
         assert settings.PORT == 8000
         assert settings.LOG_LEVEL == "INFO"
 

@@ -15,7 +15,7 @@ CURSOR_CLI_PROXY_TMP = "/tmp/cursor-cli-proxy"
 
 class Settings(BaseSettings):
     CURSOR_KEY: Optional[str] = None
-    HOST: str = "0.0.0.0"
+    HOST: str = "127.0.0.1"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
     ENABLE_INFO_IN_THINK: bool = False  # Output session_id and slash_commands in <think> block

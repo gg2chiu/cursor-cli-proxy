@@ -12,75 +12,57 @@ A FastAPI-based proxy server that provides an OpenAI-compatible API interface fo
 - 📝 **Structured Logging**: JSON-formatted logs for easy parsing and monitoring
 - ⚙️ **Environment Configuration**: Customize settings via environment variables
 
-
-
 ## Installation
 
-### Option 1: Native Installation
+Clone the repository:
 
-If you prefer to run without Docker:
+```bash
+git clone <repository-url>
+cd cursor-cli-proxy
+```
+
+### Option 1: Native Installation
 
 #### Prerequisites
 
 - Python 3.8 or higher
 - [cursor-agent](https://cursor.com/docs/cli/overview) CLI tool installed and available in PATH
 
-1. Clone the repository:
 
-```bash
-git clone <repository-url>
-cd cursor-cli-proxy
-```
-
-2. Create and activate a virtual environment:
+1. Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
 source venv/bin/activate
 ```
 
-3. Install dependencies:
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Note**: You must have the [cursor-agent](https://cursor.com/docs/cli/installation) CLI tool installed and available in your PATH for native installation.
+3. Start the server:
 
+```bash
+python -m src.main
+```
 
 ### Option 2: Docker
 
-The easiest way to run the Cursor CLI Proxy is using Docker, which handles all dependencies including the cursor-agent CLI automatically. Cursor settings (rules, commands) should be project-based, as they will not be copied to the container.
+The easiest way to run the proxy. Docker handles all dependencies including cursor-agent automatically. Cursor settings (rules, commands) should be project-based, as they will not be copied to the container.
 
-1. Clone the repository:
-
-```bash
-git clone <repository-url>
-cd cursor-cli-proxy
-```
-
-2. Create a `.env` file for configuration:
+1. Create a `.env` file for configuration:
 
 ```bash
 cp .env.example .env
 # Edit .env with your settings (see Configuration section)
 ```
 
-3. Start the service using Docker:
+2. Start the service:
 
 ```bash
-# Using docker compose
 docker compose up -d
-
-# Or build manually
-docker build -t cursor-cli-proxy .
-docker run -d \
-  --name cursor-cli-proxy \
-  --env-file .env \
-  -p 8000:8000 \
-  -v "$(pwd)/sessions.json:/app/sessions.json:rw" \
-  -v "$(pwd)/models.json:/app/models.json:rw" \
-  cursor-cli-proxy
 ```
 
 The server will be available at `http://localhost:8000` (or `https://` if HTTPS is enabled).
@@ -93,9 +75,6 @@ The server will be available at `http://localhost:8000` (or `https://` if HTTPS 
 #### Docker Commands
 
 ```bash
-# Start the service
-docker compose up -d
-
 # View logs
 docker compose logs -f
 
@@ -118,20 +97,19 @@ The following files are mounted as volumes for persistence:
 - `sessions.json` - Session state and conversation history
 - `models.json` - Cached model list from cursor-agent
 
-These files will persist between container restarts.
-
 ## Configuration
 
-Configure the relay server using environment variables. All settings have default values defined in `src/config.py`:
+Configure the server using environment variables. All settings have default values defined in `src/config.py`.
 You can set them via a `.env` file or your shell environment.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CURSOR_KEY` | `None` | Default Cursor API key (optional). ⚠️ **Security Warning**: This proxy does not implement authentication. You must add your own authentication layer (e.g., API keys, OAuth, reverse proxy with auth) before exposing this service with CURSOR_KEY. |
-| `HOST` | `0.0.0.0` | Server bind address |
+| `HOST` | `127.0.0.1` | Server bind address. Setting this to `0.0.0.0` will expose this service to external connections. |
 | `PORT` | `8000` | Server port |
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
-| `ENABLE_INFO_IN_THINK` | `false` | Output session_id and slash_commands in `<think>` block at start of first response |
+| `ENABLE_INFO_IN_THINK` | `false` | Output session_id and skills/commands/agents in `<think>` block at start of first response |
+| `ENABLE_SKILLS_IN_PROMPT` | `false` | Inject available skills/commands/agents metadata into the system prompt. |
 | `ENABLE_HTTPS` | `false` | Enable HTTPS/TLS encryption |
 | `HTTPS_CERT_PATH` | `""` | Path to SSL certificate file (required if HTTPS enabled) |
 | `HTTPS_KEY_PATH` | `""` | Path to SSL private key file (required if HTTPS enabled) |
@@ -143,26 +121,7 @@ You can set them via a `.env` file or your shell environment.
 
 **Note**: `cursor-agent` binary must be available in your system PATH. The temporary directory is fixed at `/tmp/cursor-cli-proxy`.
 
-Example usage with a `.env` file:
-
-```bash
-cp .env.example .env
-# edit .env as needed
-```
-
-Example usage with environment variables:
-
-```bash
-export CURSOR_KEY=your-cursor-api-key-here
-export HOST=127.0.0.1
-export PORT=8000
-export LOG_LEVEL=INFO
-export WORKSPACE_WHITELIST_1=/home/user/projects
-export WORKSPACE_WHITELIST_2=/opt/workspace
-python -m src.main
-```
-
-Or pass them inline:
+Example with environment variables:
 
 ```bash
 CURSOR_KEY=your-key HOST=127.0.0.1 PORT=8000 python -m src.main
@@ -204,7 +163,6 @@ To enable HTTPS/TLS encryption:
 
    **Option B: Using mkcert (local development, browser-trusted)**
    ```bash
-   # Install mkcert first: https://github.com/FiloSottile/mkcert
    mkcert -install
    mkdir -p sslcert
    mkcert -key-file sslcert/key.pem -cert-file sslcert/cert.pem localhost 127.0.0.1
@@ -213,7 +171,6 @@ To enable HTTPS/TLS encryption:
    **Option C: Let's Encrypt (production)**
    ```bash
    sudo certbot certonly --standalone -d your-domain.com
-   # Certificates will be in /etc/letsencrypt/live/your-domain.com/
    ```
 
 2. **Configure environment variables** in `.env`:
@@ -226,67 +183,29 @@ To enable HTTPS/TLS encryption:
 3. **Start the server** - it will automatically use HTTPS:
    ```bash
    python -m src.main
-   # Output: INFO:     Uvicorn running on https://0.0.0.0:8000
    ```
 
 **Note**: When using self-signed certificates, clients may need to disable certificate verification or add the certificate to their trust store.
 
-## Usage
-
-### Starting the Server
-
-Start the relay server:
+## Command Line Options
 
 ```bash
+# Start the server
 python -m src.main
-```
 
-The server will be available at `http://localhost:8000` (or `https://` if HTTPS is enabled).
-
-### Development Mode with Auto-Reload
-
-For development, enable auto-reload on code changes:
-
-```bash
+# Development mode with auto-reload
 python -m src.main --reload
-```
 
-### Command Line Options
-
-#### Update Model List
-
-Fetch the latest available models from cursor-agent and update the cache:
-
-```bash
+# Fetch latest models from cursor-agent and update cache
 python -m src.main --update-model
-```
 
-This command will:
-- Query cursor-agent for available models
-- Update `models.json` cache file
-- Exit after completion
-
-#### Clear Session Data
-
-Remove all session data and workspace directories:
-
-```bash
+# Remove all session data and workspace directories (⚠️ irreversible)
 python -m src.main --clear
 ```
-
-This command will:
-- Clear `sessions.json` (reset to empty)
-- Remove `sessions.json.lock` file
-- Delete the entire temp directory (`/tmp/cursor-cli-proxy`)
-- Exit after completion
-
-**⚠️ Warning**: This operation is irreversible!
 
 ## API Endpoints
 
 ### Chat Completions
-
-Create a chat completion using the OpenAI-compatible format.
 
 **Endpoint**: `POST /v1/chat/completions`
 
@@ -339,8 +258,6 @@ data: [DONE]
 
 ### List Models
 
-Get a list of available models.
-
 **Endpoint**: `GET /v1/models`
 
 **Headers**:
@@ -371,14 +288,14 @@ Authorization: Bearer YOUR_CURSOR_API_KEY
 
 ## Session Management
 
-The relay server implements intelligent session management to bridge the gap between OpenAI's stateless API and Cursor's stateful CLI:
+The proxy implements intelligent session management to bridge the gap between OpenAI's stateless API and Cursor's stateful CLI:
 
 ### How It Works
 
 1. **Hash-Based Matching**: Each conversation history is hashed using SHA-256
 2. **Session Creation**: New conversations create a new session with a unique ID
 3. **Session Resumption**: Subsequent requests with matching history resume the existing session
-4. **Context Optimization**: 
+4. **Context Optimization**:
    - New sessions receive the full message history
    - Resumed sessions only receive the latest message (context is already loaded)
 
@@ -393,7 +310,7 @@ Sessions are stored in `sessions.json` in the project root:
       "session_id": "session-uuid-...",
       "history_hash": "abc123...",
       "title": "Hello, how are you?",
-      "workspace_dir": "/tmp/.cursor-relay/session-uuid-...",
+      "workspace_dir": "/tmp/cursor-cli-proxy/session-uuid-...",
       "created_at": "2026-01-07T10:30:00Z",
       "updated_at": "2026-01-07T10:35:00Z"
     }
@@ -491,71 +408,40 @@ cursor-cli-proxy/
 
 ### Running Tests
 
-First, ensure test dependencies are installed:
-
 ```bash
 pip install -e ".[test]"
-```
-
-Then run the tests:
-
-```bash
 pytest
 ```
 
-
 ## Troubleshooting
 
-### Docker-specific Issues
+### Docker Issues
 
-#### Container fails to start
-1. Check logs: `docker compose logs -f`
-2. Verify `.env` file exists and has correct values
-3. Ensure ports are not already in use: `sudo lsof -i :8000`
+- **Container fails to start**: Check logs with `docker compose logs -f`, verify `.env` values, ensure port 8000 is free.
+- **Workspace access errors**: Ensure paths are absolute, uncomment the corresponding volume mount in `docker-compose.yml`, and verify host directory permissions.
 
-#### Workspace access errors
-1. Ensure workspace paths in `.env` are absolute paths
-2. Uncomment the corresponding volume mount in `docker-compose.yml`
-3. Verify the host directory exists and has proper permissions
-4. Restart the container: `docker compose restart`
+### HTTPS Certificate Errors
 
-### HTTPS certificate errors
+- Verify certificate files exist at the configured paths
+- Ensure certificate and key match: compare outputs of `openssl x509 -noout -modulus -in cert.pem | openssl md5` and `openssl rsa -noout -modulus -in key.pem | openssl md5`
+- For self-signed certificates, clients need to use `-k` (curl) or disable SSL verification
 
-If HTTPS fails to start:
-1. Verify certificate files exist at the configured paths
-2. Check file permissions: `ls -la sslcert/`
-3. Ensure certificate and key match: `openssl x509 -noout -modulus -in sslcert/cert.pem | openssl md5` should match `openssl rsa -noout -modulus -in sslcert/key.pem | openssl md5`
-4. For self-signed certificates, clients need to use `-k` (curl) or disable SSL verification
+### cursor-agent Not Found
 
-### cursor-agent not found
+Ensure cursor-agent is installed and in your PATH: `which cursor-agent`
 
-If you see `cursor-agent binary not found`, ensure:
-1. cursor-agent is installed: Check Cursor app documentation
-2. It's in your PATH: `which cursor-agent` or `where cursor-agent`
+### Authentication Errors (401)
 
-### Authentication errors
+- Verify your Cursor API key is valid
+- Check the `Authorization` header format: `Bearer YOUR_KEY`
+- Or set `CURSOR_KEY` environment variable as default
 
-If you receive 401 errors:
-1. Verify your Cursor API key is valid
-2. Check the `Authorization` header format: `Bearer YOUR_KEY`
-3. Or set `CURSOR_KEY` environment variable to use as default
+### Session Issues
 
-### Session issues
-
-If conversations aren't resuming correctly:
-1. Clear session data: `python -m src.main --clear`
-2. Check `sessions.json` for corruption
-3. Ensure the temp directory (`/tmp/cursor-cli-proxy`) has write permissions
+- Clear session data: `python -m src.main --clear`
+- Check `sessions.json` for corruption
+- Ensure `/tmp/cursor-cli-proxy` has write permissions
 
 ## License
 
-[Your License Here]
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-For issues and questions, please open an issue on the GitHub repository.
-
+MIT
