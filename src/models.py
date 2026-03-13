@@ -41,7 +41,7 @@ class ChatCompletionRequest(BaseModel):
     model: str
     messages: List[Message]
     stream: bool = False
-    
+
     @field_validator('messages')
     @classmethod
     def check_messages_not_empty(cls, v):
@@ -150,10 +150,24 @@ def _response_content_to_internal(content: Any) -> Union[str, List[ContentPart]]
         elif ptype == "input_file":
             file_data = part.get("file_data", "")
             fname = part.get("filename", "uploaded_file")
-            parts.append(TextContentPart(
-                type="text",
-                text=f"[File: {fname}]\n{file_data}" if file_data else f"[File: {fname}]",
-            ))
+            if isinstance(file_data, str) and file_data.startswith("data:"):
+                from src.temp_file_handler import save_data_url_to_temp_file
+                filepath = save_data_url_to_temp_file(file_data, fname)
+                if filepath:
+                    parts.append(TextContentPart(
+                        type="text",
+                        text=f"File '{fname}': @{filepath}",
+                    ))
+                else:
+                    parts.append(TextContentPart(
+                        type="text",
+                        text=f"[File: {fname}]\n{file_data}" if file_data else f"[File: {fname}]",
+                    ))
+            else:
+                parts.append(TextContentPart(
+                    type="text",
+                    text=f"[File: {fname}]\n{file_data}" if file_data else f"[File: {fname}]",
+                ))
     return parts if parts else _extract_text_from_response_content(content)
 
 

@@ -19,6 +19,10 @@ def save_content_to_temp_file(content: str, filename_hint: str = None, extension
     """
     Save text content to a temporary file and return the file path.
     Uses a hash-based filename to avoid duplicates.
+
+    Used by Chat Completions API: clients (e.g. Open WebUI) pre-convert files
+    (PDF, JSON, CSV, etc.) to plain text before sending, so we receive text
+    content with the filename as the first line.
     """
     # Create temp directory if not exists
     os.makedirs(CURSOR_CLI_PROXY_TMP, exist_ok=True)
@@ -45,6 +49,69 @@ def save_content_to_temp_file(content: str, filename_hint: str = None, extension
     
     logger.debug(f"Saved text content to temp file: {filepath} ({len(content)} bytes)")
     return filepath
+
+
+def save_data_url_to_temp_file(data_url: str, filename: str = None) -> Optional[str]:
+    """
+    Save a base64 data URL to a temporary file and return the file path.
+    Works for any MIME type (PDF, images, documents, etc.).
+    Uses the filename's extension when available, otherwise infers from MIME type.
+
+    Used by Responses API: clients send files as base64 data URLs in
+    ``input_file`` content parts (e.g. ``data:application/pdf;base64,...``).
+    """
+    if not data_url.startswith("data:"):
+        logger.warning(f"Invalid data URL format: {data_url[:50]}...")
+        return None
+
+    try:
+        header, encoded = data_url.split(",", 1)
+
+        mime_part = header.split(";")[0]  # e.g. data:application/pdf
+        mime_type = mime_part.split(":")[1] if ":" in mime_part else "application/octet-stream"
+
+        ext = None
+        if filename and "." in filename:
+            candidate = "." + filename.rsplit(".", 1)[-1].lower()
+            if len(candidate) <= 10 and candidate[1:].isalnum():
+                ext = candidate
+
+        if ext is None:
+            mime_ext_map = {
+                "application/pdf": ".pdf",
+                "application/json": ".json",
+                "application/xml": ".xml",
+                "text/plain": ".txt",
+                "text/csv": ".csv",
+                "text/html": ".html",
+                "text/markdown": ".md",
+                "image/jpeg": ".jpg",
+                "image/png": ".png",
+                "image/gif": ".gif",
+                "image/webp": ".webp",
+            }
+            ext = mime_ext_map.get(mime_type)
+            if ext is None:
+                sub = mime_type.split("/")[-1] if "/" in mime_type else "bin"
+                ext = f".{sub}" if sub.isalnum() and len(sub) <= 10 else ".bin"
+
+        file_data = base64.b64decode(encoded)
+
+        content_hash = hashlib.md5(file_data).hexdigest()[:12]
+        out_filename = f"upload_{content_hash}{ext}"
+        filepath = os.path.join(CURSOR_CLI_PROXY_TMP, out_filename)
+
+        os.makedirs(CURSOR_CLI_PROXY_TMP, exist_ok=True)
+
+        with open(filepath, "wb") as f:
+            f.write(file_data)
+
+        logger.debug(f"Saved data URL to temp file: {filepath} ({len(file_data)} bytes, mime={mime_type})")
+        return filepath
+
+    except Exception as e:
+        logger.error(f"Failed to save data URL file: {e}")
+        return None
 
 
 def save_image_to_temp_file(data_url: str) -> Optional[str]:
