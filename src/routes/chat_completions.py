@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.config import config, logger
-from src.model_registry import ModelRegistry
 from src.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -39,7 +38,6 @@ async def chat_completions(
     request: ChatCompletionRequest,
     api_key: str = Depends(verify_auth),
 ):
-    request.model = ModelRegistry.to_cli_id(request.model)
     logger.info(f"Received chat completion request for model: {request.model}, stream={request.stream}")
     try:
         custom_workspace, custom_session_id, cleaned_messages = extract_workspace_from_messages(request.messages)

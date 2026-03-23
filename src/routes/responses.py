@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.config import config, logger
-from src.model_registry import ModelRegistry
 from src.models import (
     ResponseCreateRequest,
     ResponseObject,
@@ -39,7 +38,7 @@ async def create_response(
     request: ResponseCreateRequest,
     api_key: str = Depends(verify_auth),
 ):
-    model = ModelRegistry.to_cli_id(request.model)
+    model = request.model
     logger.info(f"Received responses request for model: {model}, stream={request.stream}")
 
     try:
