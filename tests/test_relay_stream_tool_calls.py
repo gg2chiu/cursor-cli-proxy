@@ -224,6 +224,44 @@ async def test_run_stream_arbitrary_tool_names():
         assert chunks == expected
 
 @pytest.mark.asyncio
+async def test_run_stream_tool_calls_without_call_id():
+    """Started/completed events without call_id should still share a consistent tool number."""
+    executor = Executor()
+
+    mock_process = AsyncMock()
+    mock_process.stdout = AsyncMock()
+    mock_process.stdout.__aiter__.return_value = [
+        b'{"type":"system","subtype":"init","model":"claude-3.5-sonnet"}\n',
+        b'{"type":"tool_call","subtype":"started","tool_call":{"readToolCall":{"args":{"path":"a.txt"}}}}\n',
+        b'{"type":"tool_call","subtype":"completed","tool_call":{"readToolCall":{"result":{"success":{"totalLines":10}}}}}\n',
+        b'{"type":"tool_call","subtype":"started","tool_call":{"readToolCall":{"args":{"path":"b.txt"}}}}\n',
+        b'{"type":"tool_call","subtype":"completed","tool_call":{"readToolCall":{"result":{"success":{"totalLines":20}}}}}\n',
+        b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]},"timestamp_ms":123}\n',
+        b'{"type":"result","duration_ms":1000}\n',
+    ]
+    mock_process.wait.return_value = 0
+    mock_process.returncode = 0
+
+    with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+        chunks = []
+        async for chunk in executor.run_stream(["cmd"]):
+            chunks.append(chunk)
+
+        expected = [
+            "\n",
+            "\n",
+            "📖 Tool #1: Reading a.txt\n ",
+            "📖 Tool #1: Read 10 lines\n ",
+            "📖 Tool #2: Reading b.txt\n ",
+            "📖 Tool #2: Read 20 lines\n ",
+            "\n",
+            "Done",
+            "\n",
+        ]
+        assert chunks == expected
+
+
+@pytest.mark.asyncio
 async def test_run_stream_interleaved_tool_calls():
     """Test tool calls that are interleaved (two starts, then two completions)"""
     executor = Executor()

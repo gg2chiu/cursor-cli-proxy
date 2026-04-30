@@ -3,6 +3,7 @@ Executor for running CLI commands.
 """
 import asyncio
 import json
+from collections import deque
 from typing import List, Optional
 
 from loguru import logger
@@ -93,6 +94,10 @@ class Executor:
         tool_count = 0
         call_id_to_tool_number = {}  # Track call_id -> tool_number mapping
         call_id_to_started_args = {}  # Cache started-event args so completed events keep tool context
+        # Fallback FIFO for paired events that arrive without a call_id. Each entry is
+        # (tool_number, tool_key, started_args) so completed events can recover the
+        # tool number and the started args that the formatter expects.
+        anonymous_started = deque()
         last_full_text = ""
         last_type = None
         
@@ -162,26 +167,46 @@ class Executor:
                     # Format and yield tool call information
                     if subtype == "started":
                         tool_count += 1
+                        started_key = None
+                        started_args = None
+                        if tool_call:
+                            started_key = next(iter(tool_call.keys()))
+                            started_args = (tool_call.get(started_key) or {}).get("args")
                         if call_id:
                             call_id_to_tool_number[call_id] = tool_count
-                            if tool_call:
-                                key = next(iter(tool_call.keys()))
-                                started_args = (tool_call.get(key) or {}).get("args")
-                                if started_args is not None:
-                                    call_id_to_started_args[call_id] = (key, started_args)
+                            if started_key is not None and started_args is not None:
+                                call_id_to_started_args[call_id] = (started_key, started_args)
+                        else:
+                            # No call_id: remember this start so the matching completed
+                            # event (which will also lack a call_id) gets the same tool number.
+                            anonymous_started.append((tool_count, started_key, started_args))
                         tool_info = format_tool_call_start(tool_call, tool_count)
                         if tool_info:
                             yield tool_info
                     elif subtype == "completed":
-                        tool_number = call_id_to_tool_number.get(call_id) if call_id else None
-                        if call_id and tool_call:
-                            key = next(iter(tool_call.keys()))
-                            inner = tool_call.get(key) or {}
-                            if "args" not in inner:
-                                cached = call_id_to_started_args.get(call_id)
-                                if cached and cached[0] == key:
-                                    inner["args"] = cached[1]
-                                    tool_call[key] = inner
+                        if call_id:
+                            tool_number = call_id_to_tool_number.get(call_id)
+                            if tool_call:
+                                key = next(iter(tool_call.keys()))
+                                inner = tool_call.get(key) or {}
+                                if "args" not in inner:
+                                    cached = call_id_to_started_args.get(call_id)
+                                    if cached and cached[0] == key:
+                                        inner["args"] = cached[1]
+                                        tool_call[key] = inner
+                        else:
+                            # Pair anonymous completed events with their started counterparts in FIFO order.
+                            tool_number = None
+                            if anonymous_started:
+                                pending_number, pending_key, pending_args = anonymous_started.popleft()
+                                tool_number = pending_number
+                                if tool_call and pending_key is not None:
+                                    key = next(iter(tool_call.keys()))
+                                    if key == pending_key:
+                                        inner = tool_call.get(key) or {}
+                                        if "args" not in inner and pending_args is not None:
+                                            inner["args"] = pending_args
+                                            tool_call[key] = inner
                         tool_result = format_tool_call_result(tool_call, tool_number)
                         if tool_result:
                             yield tool_result
