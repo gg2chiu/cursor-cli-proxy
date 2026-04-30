@@ -110,6 +110,8 @@ You can set them via a `.env` file or your shell environment.
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
 | `ENABLE_INFO_IN_THINK` | `false` | Output session_id and skills/commands/agents in `<think>` block at start of first response |
 | `ENABLE_SKILLS_IN_PROMPT` | `false` | Inject available skills/commands/agents metadata into the system prompt. |
+| `ENABLE_THINKING_OUTPUT` | `true` | Stream cursor-agent `thinking` delta text to clients. Set to `false` to hide thinking output. |
+| `ENABLE_TOOL_CALL_OUTPUT` | `true` | Stream formatted cursor-agent tool call events to clients. Set to `false` to hide tool call output. |
 | `ENABLE_HTTPS` | `false` | Enable HTTPS/TLS encryption |
 | `HTTPS_CERT_PATH` | `""` | Path to SSL certificate file (required if HTTPS enabled) |
 | `HTTPS_KEY_PATH` | `""` | Path to SSL private key file (required if HTTPS enabled) |

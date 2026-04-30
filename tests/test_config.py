@@ -10,12 +10,24 @@ def test_settings_defaults():
         assert settings.HOST == "127.0.0.1"
         assert settings.PORT == 8000
         assert settings.LOG_LEVEL == "INFO"
+        assert settings.ENABLE_THINKING_OUTPUT is True
+        assert settings.ENABLE_TOOL_CALL_OUTPUT is True
 
 def test_settings_env_override():
-    with patch.dict(os.environ, {"PORT": "9000", "LOG_LEVEL": "DEBUG"}):
+    with patch.dict(
+        os.environ,
+        {
+            "PORT": "9000",
+            "LOG_LEVEL": "DEBUG",
+            "ENABLE_THINKING_OUTPUT": "false",
+            "ENABLE_TOOL_CALL_OUTPUT": "false",
+        },
+    ):
         settings = Settings(_env_file=None)
         assert settings.PORT == 9000
         assert settings.LOG_LEVEL == "DEBUG"
+        assert settings.ENABLE_THINKING_OUTPUT is False
+        assert settings.ENABLE_TOOL_CALL_OUTPUT is False
 
 def test_settings_dot_env():
     # 模擬 .env 內容

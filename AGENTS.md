@@ -36,6 +36,7 @@ This file provides instructions and guidelines for AI agents working on this cod
 - **Refactoring**: Ensure existing tests pass before and after refactoring
 - **Test Location**: Place tests in `tests/` directory with `test_` prefix
 - **Test Naming**: Use descriptive names like `test_session_manager_creates_new_session`
+- **Environment Isolation**: Tests must not depend on local `.env` values. When testing configuration or behavior controlled by settings, explicitly isolate the environment with `Settings(_env_file=None)`, `patch.dict(os.environ, ..., clear=True)`, or `monkeypatch` the relevant `config` attributes in the test.
 
 ### Integration Test Requirements (Tests Using FastAPI `TestClient`)
 

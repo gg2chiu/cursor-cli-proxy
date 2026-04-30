@@ -1,6 +1,11 @@
 import pytest
 from unittest.mock import AsyncMock, patch
+from src.config import config
 from src.relay import Executor
+
+@pytest.fixture(autouse=True)
+def enable_tool_call_output(monkeypatch):
+    monkeypatch.setattr(config, "ENABLE_TOOL_CALL_OUTPUT", True)
 
 @pytest.mark.asyncio
 async def test_run_stream_mcp_tool_call_rejected():

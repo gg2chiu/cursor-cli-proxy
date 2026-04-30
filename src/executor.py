@@ -6,6 +6,7 @@ import json
 from typing import List, Optional
 
 from loguru import logger
+from src.config import config
 from src.tool_formatters import format_tool_call_start, format_tool_call_result
 
 
@@ -143,10 +144,16 @@ class Executor:
                         logger.debug(f"[Stream Line {line_count}] System init, model={model}")
                     else:
                         logger.debug(f"[Stream Line {line_count}] System event subtype={subtype}")
-                elif event_type == "thinking":
-                    # Handle thinking messages - extract and stream thinking content
-                    yield "."
-                elif event_type == "tool_call":
+                elif event_type == "thinking" and config.ENABLE_THINKING_OUTPUT:
+                    subtype = data.get("subtype")
+                    if subtype == "delta":
+                        text = data.get("text", "")
+                        if text:
+                            logger.debug(f"[Stream Line {line_count}] Thinking delta text = {text}")
+                            yield text
+                    else:
+                        logger.debug(f"[Stream Line {line_count}] Thinking event subtype={subtype}")
+                elif event_type == "tool_call" and config.ENABLE_TOOL_CALL_OUTPUT:
                     subtype = data.get("subtype")
                     call_id = data.get("call_id")
                     tool_call = data.get("tool_call", {})
@@ -183,7 +190,7 @@ class Executor:
                     logger.debug(f"[Stream Line {line_count}] Result event duration_ms={duration_ms}, ending stream")
                     break
                 else:
-                    logger.debug(f"[Stream Line {line_count}] Skipping unknown message type={event_type}")
+                    logger.debug(f"[Stream Line {line_count}] Skipping message type={event_type}")
 
                 last_type = event_type
 
