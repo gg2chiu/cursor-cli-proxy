@@ -41,10 +41,10 @@ async def test_run_stream_mcp_tool_call_rejected():
             "\n",
             "\n",
             "\n",
-            "🔌 Tool #1: MCP bitbucket_R1-bitbucket_R1-get_pull_request\n ",
-            "🔌 Tool #1: Rejected: MCP tool execution rejected by user: bitbucket_R1-get_pull_request \n ",
-            "🔌 Tool #2: MCP bitbucket_R1-bitbucket_R1-get_diff\n ",
-            "🔌 Tool #2: Rejected: MCP tool execution rejected by user: bitbucket_R1-get_diff \n ",
+            "🔌 Tool #1: MCP[bitbucket_R1] get_pull_request\n ",
+            "🔌 Tool #1: MCP[bitbucket_R1] get_pull_request rejected: MCP tool execution rejected by user: bitbucket_R1-get_pull_request \n ",
+            "🔌 Tool #2: MCP[bitbucket_R1] get_diff\n ",
+            "🔌 Tool #2: MCP[bitbucket_R1] get_diff rejected: MCP tool execution rejected by user: bitbucket_R1-get_diff \n ",
             "\n",
             "User rejected",
             " tool",
@@ -66,8 +66,8 @@ async def test_run_stream_read_write_tool_calls():
         b'{"type":"tool_call","subtype":"started","call_id":"read_001","tool_call":{"readToolCall":{"args":{"path":"src/main.py"}}}}\n',
         b'{"type":"tool_call","subtype":"completed","call_id":"read_001","tool_call":{"readToolCall":{"result":{"success":{"totalLines":223,"content":"..."}}}}}\n',
         # Write tool call
-        b'{"type":"tool_call","subtype":"started","call_id":"write_001","tool_call":{"writeToolCall":{"args":{"path":"test.txt"}}}}\n',
-        b'{"type":"tool_call","subtype":"completed","call_id":"write_001","tool_call":{"writeToolCall":{"result":{"success":{"linesCreated":10,"fileSize":256}}}}}\n',
+        b'{"type":"tool_call","subtype":"started","call_id":"write_001","tool_call":{"editToolCall":{"args":{"path":"test.txt","streamContent":"hello"}}}}\n',
+        b'{"type":"tool_call","subtype":"completed","call_id":"write_001","tool_call":{"editToolCall":{"result":{"success":{"path":"test.txt","linesAdded":10,"linesRemoved":0,"afterFullFileContent":"...","message":"Wrote contents to test.txt"}}}}}\n',
         # Assistant response
         b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done!"}]},"timestamp_ms":123}\n',
         b'{"type":"result","duration_ms":1000}\n'
@@ -85,8 +85,8 @@ async def test_run_stream_read_write_tool_calls():
             "\n",
             "📖 Tool #1: Reading src/main.py\n ",
             "📖 Tool #1: Read 223 lines\n ",
-            "🖊️ Tool #2: Creating test.txt\n ",
-            "🖊️ Tool #2: Created 10 lines (256 bytes)\n ",
+            "🖊️ Tool #2: Writing test.txt\n ",
+            "🖊️ Tool #2: Created test.txt (+10/-0 lines)\n ",
             "\n",
             "Done!",
             "\n"
@@ -106,8 +106,8 @@ async def test_run_stream_tool_call_errors():
         b'{"type":"tool_call","subtype":"started","call_id":"read_001","tool_call":{"readToolCall":{"args":{"path":"nonexistent.txt"}}}}\n',
         b'{"type":"tool_call","subtype":"completed","call_id":"read_001","tool_call":{"readToolCall":{"result":{"error":{"message":"File not found"}}}}}\n',
         # Write tool call with error
-        b'{"type":"tool_call","subtype":"started","call_id":"write_001","tool_call":{"writeToolCall":{"args":{"path":"/root/test.txt"}}}}\n',
-        b'{"type":"tool_call","subtype":"completed","call_id":"write_001","tool_call":{"writeToolCall":{"result":{"error":{"message":"Permission denied"}}}}}\n',
+        b'{"type":"tool_call","subtype":"started","call_id":"write_001","tool_call":{"editToolCall":{"args":{"path":"/root/test.txt","streamContent":"x"}}}}\n',
+        b'{"type":"tool_call","subtype":"completed","call_id":"write_001","tool_call":{"editToolCall":{"result":{"error":{"message":"Permission denied"}}}}}\n',
         # Assistant response
         b'{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Encountered errors"}]},"timestamp_ms":123}\n',
         b'{"type":"result","duration_ms":1000}\n'
@@ -125,7 +125,7 @@ async def test_run_stream_tool_call_errors():
             "\n",
             "📖 Tool #1: Reading nonexistent.txt\n ",
             "📖 Tool #1: Error: File not found\n ",
-            "🖊️ Tool #2: Creating /root/test.txt\n ",
+            "🖊️ Tool #2: Writing /root/test.txt\n ",
             "🖊️ Tool #2: Error: Permission denied\n ",
             "\n",
             "Encountered errors",
@@ -166,11 +166,11 @@ async def test_run_stream_generic_tool_calls():
         expected = [
             "\n",
             "\n",
-            '🔨 Tool #1: executeToolCall \n ',
+            '🔨 Tool #1: executeToolCall\n ',
             "🔨 Tool #1: Completed\n ",
-            '🔨 Tool #2: analyzeToolCall \n ',
+            '🔨 Tool #2: analyzeToolCall\n ',
             "🔨 Tool #2: Error: Analysis failed\n ",
-            '🔨 Tool #3: customCall \n ',
+            '🔨 Tool #3: customCall\n ',
             "🔨 Tool #3: Rejected: User cancelled\n ",
             "\n",
             "Tools executed",
@@ -208,9 +208,9 @@ async def test_run_stream_arbitrary_tool_names():
         expected = [
             "\n",
             "\n",
-            '🔨 Tool #1: someCustomTool \n ',
+            '🔨 Tool #1: someCustomTool\n ',
             "🔨 Tool #1: Completed\n ",
-            '🔨 Tool #2: anotherTool \n ',
+            '🔨 Tool #2: anotherTool\n ',
             "🔨 Tool #2: Error: Failed\n ",
             "\n",
             "Complete",

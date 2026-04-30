@@ -91,6 +91,7 @@ class Executor:
         line_count = 0
         tool_count = 0
         call_id_to_tool_number = {}  # Track call_id -> tool_number mapping
+        call_id_to_started_args = {}  # Cache started-event args so completed events keep tool context
         last_full_text = ""
         last_type = None
         
@@ -154,15 +155,26 @@ class Executor:
                     # Format and yield tool call information
                     if subtype == "started":
                         tool_count += 1
-                        # Remember the mapping from call_id to tool_number
                         if call_id:
                             call_id_to_tool_number[call_id] = tool_count
+                            if tool_call:
+                                key = next(iter(tool_call.keys()))
+                                started_args = (tool_call.get(key) or {}).get("args")
+                                if started_args is not None:
+                                    call_id_to_started_args[call_id] = (key, started_args)
                         tool_info = format_tool_call_start(tool_call, tool_count)
                         if tool_info:
                             yield tool_info
                     elif subtype == "completed":
-                        # Look up the tool_number for this call_id
                         tool_number = call_id_to_tool_number.get(call_id) if call_id else None
+                        if call_id and tool_call:
+                            key = next(iter(tool_call.keys()))
+                            inner = tool_call.get(key) or {}
+                            if "args" not in inner:
+                                cached = call_id_to_started_args.get(call_id)
+                                if cached and cached[0] == key:
+                                    inner["args"] = cached[1]
+                                    tool_call[key] = inner
                         tool_result = format_tool_call_result(tool_call, tool_number)
                         if tool_result:
                             yield tool_result
