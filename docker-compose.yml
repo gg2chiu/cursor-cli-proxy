@@ -30,10 +30,10 @@ services:
       # - ${WORKSPACE_WHITELIST_3}:${WORKSPACE_WHITELIST_3}:rw
       # - ${WORKSPACE_WHITELIST_4}:${WORKSPACE_WHITELIST_4}:rw
       # - ${WORKSPACE_WHITELIST_5}:${WORKSPACE_WHITELIST_5}:rw
-      # SSH keys and gitconfig
-      # - /home/user/.ssh/id_rsa:/root/.ssh/id_rsa:ro
-      # - /home/user/.ssh/known_hosts:/root/.ssh/known_hosts:ro
-      # - /home/user/.gitconfig:/root/.gitconfig:ro
+      # SSH keys and gitconfig (mount into agent's HOME, /home/agent)
+      # - /home/user/.ssh/id_rsa:/home/agent/.ssh/id_rsa:ro
+      # - /home/user/.ssh/known_hosts:/home/agent/.ssh/known_hosts:ro
+      # - /home/user/.gitconfig:/home/agent/.gitconfig:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:${PORT:-8000}/health"]

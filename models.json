@@ -18,12 +18,6 @@
     "name": "Composer 2"
   },
   {
-    "id": "composer-1.5",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Composer 1.5"
-  },
-  {
     "id": "gpt-5.3-codex-low",
     "object": "model",
     "owned_by": "cursor",
@@ -76,30 +70,6 @@
     "object": "model",
     "owned_by": "cursor",
     "name": "GPT-5.2"
-  },
-  {
-    "id": "gpt-5.3-codex-spark-preview-low",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Codex 5.3 Spark Low"
-  },
-  {
-    "id": "gpt-5.3-codex-spark-preview",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Codex 5.3 Spark"
-  },
-  {
-    "id": "gpt-5.3-codex-spark-preview-high",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Codex 5.3 Spark High"
-  },
-  {
-    "id": "gpt-5.3-codex-spark-preview-xhigh",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Codex 5.3 Spark Extra High"
   },
   {
     "id": "gpt-5.2-codex-low",
@@ -198,10 +168,22 @@
     "name": "Codex 5.1 Max Extra High Fast"
   },
   {
-    "id": "gpt-5.5-medium",
+    "id": "composer-2.5",
     "object": "model",
     "owned_by": "cursor",
-    "name": "GPT-5.5 1M"
+    "name": "Composer 2.5"
+  },
+  {
+    "id": "gpt-5.5-high",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 1M High"
+  },
+  {
+    "id": "gpt-5.5-high-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 High Fast"
   },
   {
     "id": "claude-opus-4-7-thinking-high",
@@ -234,16 +216,58 @@
     "name": "Opus 4.6 1M Thinking Fast"
   },
   {
-    "id": "gpt-5.5-high",
+    "id": "composer-2.5-fast",
     "object": "model",
     "owned_by": "cursor",
-    "name": "GPT-5.5 1M High"
+    "name": "Composer 2.5 Fast"
+  },
+  {
+    "id": "gpt-5.5-none",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 1M None"
+  },
+  {
+    "id": "gpt-5.5-none-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 None Fast"
+  },
+  {
+    "id": "gpt-5.5-low",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 1M Low"
+  },
+  {
+    "id": "gpt-5.5-low-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 Low Fast"
+  },
+  {
+    "id": "gpt-5.5-medium",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 1M"
+  },
+  {
+    "id": "gpt-5.5-medium-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 Fast"
   },
   {
     "id": "gpt-5.5-extra-high",
     "object": "model",
     "owned_by": "cursor",
     "name": "GPT-5.5 1M Extra High"
+  },
+  {
+    "id": "gpt-5.5-extra-high-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "GPT-5.5 Extra High Fast"
   },
   {
     "id": "claude-4.6-sonnet-medium",
@@ -264,10 +288,22 @@
     "name": "Opus 4.7 1M Low"
   },
   {
+    "id": "claude-opus-4-7-low-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Low Fast"
+  },
+  {
     "id": "claude-opus-4-7-medium",
     "object": "model",
     "owned_by": "cursor",
     "name": "Opus 4.7 1M Medium"
+  },
+  {
+    "id": "claude-opus-4-7-medium-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Medium Fast"
   },
   {
     "id": "claude-opus-4-7-high",
@@ -276,10 +312,22 @@
     "name": "Opus 4.7 1M High"
   },
   {
+    "id": "claude-opus-4-7-high-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M High Fast"
+  },
+  {
     "id": "claude-opus-4-7-xhigh",
     "object": "model",
     "owned_by": "cursor",
     "name": "Opus 4.7 1M"
+  },
+  {
+    "id": "claude-opus-4-7-xhigh-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Fast"
   },
   {
     "id": "claude-opus-4-7-max",
@@ -288,10 +336,22 @@
     "name": "Opus 4.7 1M Max"
   },
   {
+    "id": "claude-opus-4-7-max-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Max Fast"
+  },
+  {
     "id": "claude-opus-4-7-thinking-low",
     "object": "model",
     "owned_by": "cursor",
     "name": "Opus 4.7 1M Low Thinking"
+  },
+  {
+    "id": "claude-opus-4-7-thinking-low-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Low Thinking Fast"
   },
   {
     "id": "claude-opus-4-7-thinking-medium",
@@ -300,16 +360,46 @@
     "name": "Opus 4.7 1M Medium Thinking"
   },
   {
+    "id": "claude-opus-4-7-thinking-medium-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Medium Thinking Fast"
+  },
+  {
+    "id": "claude-opus-4-7-thinking-high-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M High Thinking Fast"
+  },
+  {
     "id": "claude-opus-4-7-thinking-xhigh",
     "object": "model",
     "owned_by": "cursor",
     "name": "Opus 4.7 1M Thinking"
   },
   {
+    "id": "claude-opus-4-7-thinking-xhigh-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Thinking Fast"
+  },
+  {
     "id": "claude-opus-4-7-thinking-max",
     "object": "model",
     "owned_by": "cursor",
     "name": "Opus 4.7 1M Max Thinking"
+  },
+  {
+    "id": "claude-opus-4-7-thinking-max-fast",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Opus 4.7 1M Max Thinking Fast"
+  },
+  {
+    "id": "grok-4.3",
+    "object": "model",
+    "owned_by": "cursor",
+    "name": "Grok 4.3 1M"
   },
   {
     "id": "gpt-5.4-low",
@@ -484,18 +574,6 @@
     "object": "model",
     "owned_by": "cursor",
     "name": "GPT-5.4 Nano Extra High"
-  },
-  {
-    "id": "grok-4-20",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Grok 4.20"
-  },
-  {
-    "id": "grok-4-20-thinking",
-    "object": "model",
-    "owned_by": "cursor",
-    "name": "Grok 4.20 Thinking"
   },
   {
     "id": "claude-4.5-sonnet",
