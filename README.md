@@ -8,7 +8,7 @@ A FastAPI-based proxy server that provides an OpenAI-compatible API interface fo
 - 💬 **Intelligent Session Management**: Automatically tracks conversation context using hash-based session matching
 - 🔀 **Streaming Support**: Real-time streaming responses using Server-Sent Events (SSE)
 - 🎯 **Dynamic Model Registry**: Fetch and cache available models from cursor-agent
-- 🔐 **Flexible Authentication**: Support for both Authorization headers and environment variables
+- 🔐 **Password-based Authentication**: Clients authenticate with a shared `PROXY_PASSWORD`; your real Cursor API key never leaves the server
 - 📝 **Structured Logging**: JSON-formatted logs for easy parsing and monitoring
 - ⚙️ **Environment Configuration**: Customize settings via environment variables
 
@@ -104,7 +104,8 @@ You can set them via a `.env` file or your shell environment.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CURSOR_KEY` | `None` | Default Cursor API key (optional). ⚠️ **Security Warning**: This proxy does not implement authentication. You must add your own authentication layer (e.g., API keys, OAuth, reverse proxy with auth) before exposing this service with CURSOR_KEY. |
+| `PROXY_PASSWORD` | `None` | **Required.** Client authentication password. Clients send this value as their `apiKey` / `Authorization: Bearer <PASSWORD>`. Until it is set, every API request is rejected with HTTP 500. This is the proxy's authentication layer — keep it secret. |
+| `CURSOR_KEY` | `None` | Cursor API key used **server-side** to call cursor-agent (optional). Leave it empty to rely on the local `cursor-agent login` state instead. |
 | `HOST` | `127.0.0.1` | Server bind address. Setting this to `0.0.0.0` will expose this service to external connections. |
 | `PORT` | `8000` | Server port |
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
@@ -126,8 +127,25 @@ You can set them via a `.env` file or your shell environment.
 Example with environment variables:
 
 ```bash
-CURSOR_KEY=your-key HOST=127.0.0.1 PORT=8000 python -m src.main
+PROXY_PASSWORD=your-secret-password CURSOR_KEY=your-key HOST=127.0.0.1 PORT=8000 python -m src.main
 ```
+
+### Authentication
+
+The proxy authenticates clients with a single shared secret, `PROXY_PASSWORD`. This keeps your real Cursor API key off every client.
+
+- **Server side**: set `PROXY_PASSWORD` (required). The real Cursor credential is provided by either `CURSOR_KEY` (optional) or the local `cursor-agent login` session — and never leaves the server.
+- **Client side**: send `PROXY_PASSWORD` as the `apiKey` / `Authorization: Bearer <PROXY_PASSWORD>`. Clients never see the Cursor API key.
+
+Request handling:
+
+| Condition | Result |
+|-----------|--------|
+| `PROXY_PASSWORD` not set | `500` — all requests rejected (set it to enable the proxy) |
+| Bearer token matches `PROXY_PASSWORD` | Authenticated; server uses `CURSOR_KEY` (or `cursor-agent login`) for cursor-agent |
+| Bearer token missing / wrong | `401` |
+
+The password is compared in constant time (`secrets.compare_digest`).
 
 ### Custom Workspace Support
 
@@ -213,7 +231,7 @@ python -m src.main --clear
 
 **Headers**:
 ```
-Authorization: Bearer YOUR_CURSOR_API_KEY
+Authorization: Bearer YOUR_PROXY_PASSWORD
 Content-Type: application/json
 ```
 
@@ -272,7 +290,7 @@ Note: It doesn't support `ENABLE_INFO_IN_THINK` yet.
 
 **Headers**:
 ```
-Authorization: Bearer YOUR_CURSOR_API_KEY
+Authorization: Bearer YOUR_PROXY_PASSWORD
 ```
 
 **Response**:
@@ -350,7 +368,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8000/v1",  # Use https:// if HTTPS is enabled
-    api_key="your-cursor-api-key"
+    api_key="your-proxy-password"
 )
 
 response = client.chat.completions.create(
@@ -369,7 +387,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8000/v1",
-    api_key="your-cursor-api-key"
+    api_key="your-proxy-password"
 )
 
 response = client.responses.create(
@@ -397,7 +415,7 @@ import OpenAI from 'openai';
 
 const client = new OpenAI({
   baseURL: 'http://localhost:8000/v1',  // Use https:// if HTTPS is enabled
-  apiKey: 'your-cursor-api-key',
+  apiKey: 'your-proxy-password',
 });
 
 const response = await client.chat.completions.create({
@@ -416,7 +434,7 @@ import OpenAI from 'openai';
 
 const client = new OpenAI({
   baseURL: 'http://localhost:8000/v1',
-  apiKey: 'your-cursor-api-key',
+  apiKey: 'your-proxy-password',
 });
 
 const response = await client.responses.create({
@@ -432,7 +450,7 @@ console.log(response.output_text);
 **Chat Completions**:
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer your-cursor-api-key" \
+  -H "Authorization: Bearer your-proxy-password" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "composer-1.5",
@@ -446,7 +464,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 **Responses API**:
 ```bash
 curl -X POST http://localhost:8000/v1/responses \
-  -H "Authorization: Bearer your-cursor-api-key" \
+  -H "Authorization: Bearer your-proxy-password" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "composer-1.5",
@@ -498,11 +516,11 @@ pytest
 
 Ensure cursor-agent is installed and in your PATH: `which cursor-agent`
 
-### Authentication Errors (401)
+### Authentication Errors (401 / 500)
 
-- Verify your Cursor API key is valid
-- Check the `Authorization` header format: `Bearer YOUR_KEY`
-- Or set `CURSOR_KEY` environment variable as default
+- `401`: the Bearer token does not match `PROXY_PASSWORD`. Check the `Authorization` header format: `Bearer YOUR_PROXY_PASSWORD`.
+- `500` (Server misconfiguration): `PROXY_PASSWORD` is not set on the server. Set it to enable the proxy.
+- If cursor-agent reports an invalid key, verify the server-side `CURSOR_KEY`, or log in with `cursor-agent login` and leave `CURSOR_KEY` empty.
 
 ### Session Issues
 

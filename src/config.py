@@ -15,6 +15,7 @@ CURSOR_CLI_PROXY_TMP = "/tmp/cursor-cli-proxy"
 
 class Settings(BaseSettings):
     CURSOR_KEY: Optional[str] = None
+    PROXY_PASSWORD: Optional[str] = None  # Required: client-facing password used as the apiKey/Bearer token
     HOST: str = "127.0.0.1"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"

@@ -77,6 +77,12 @@ def _run_clear() -> None:
 
 
 def _run_server(reload: bool = False) -> None:
+    if not (config.PROXY_PASSWORD or "").strip().strip("'\""):
+        logger.warning(
+            "PROXY_PASSWORD is not configured. All API requests will be rejected with HTTP 500. "
+            "Set PROXY_PASSWORD to enable client authentication."
+        )
+
     uvicorn_kwargs = {
         "host": config.HOST,
         "port": config.PORT,

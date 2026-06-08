@@ -186,7 +186,8 @@ environment:
 
 Configuration is done via environment variables. See `.env.example` for available options:
 
-- `CURSOR_KEY` - Default Cursor API key
+- `PROXY_PASSWORD` - Required client authentication password (clients send it as the apiKey/Bearer token)
+- `CURSOR_KEY` - Cursor API key used server-side to call cursor-agent (optional; if unset, relies on `cursor-agent login`)
 - `HOST` / `PORT` - Server binding
 - `LOG_LEVEL` - Logging verbosity
 - `ENABLE_INFO_IN_THINK` - Output session info in think block

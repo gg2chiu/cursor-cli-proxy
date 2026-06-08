@@ -6,6 +6,7 @@ services:
       - "${HOST:-127.0.0.1}:${PORT:-8000}:${PORT:-8000}"
     environment:
       # Configuration variables from README.md
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
       - CURSOR_KEY=${CURSOR_KEY:-}
       - HOST=0.0.0.0 # Set to 0.0.0.0 to expose the service to external connections
       - PORT=${PORT:-8000}

@@ -31,6 +31,21 @@ def make_popen_mock(session_id: str, poll_returncode=None, final_returncode=None
     return mock
 
 @pytest.fixture(autouse=True)
+def override_auth():
+    """Bypass verify_auth for integration tests that hit the app via TestClient.
+
+    Auth behavior itself is covered by unit tests in tests/test_auth.py, which
+    call verify_auth directly (not through the app) and are unaffected by this.
+    """
+    from src.main import app
+    from src.routes.common import verify_auth
+
+    app.dependency_overrides[verify_auth] = lambda: "test-key"
+    yield
+    app.dependency_overrides.pop(verify_auth, None)
+
+
+@pytest.fixture(autouse=True)
 def reset_registry(tmp_path):
     # Create a temp file path for testing
     temp_cache = tmp_path / "test_models.json"

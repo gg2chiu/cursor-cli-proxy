@@ -23,6 +23,21 @@ def test_build_command_with_workspace():
     assert "--workspace" in cmd
     assert "/tmp/ws" in cmd
 
+
+def test_build_command_without_api_key():
+    """When api_key is empty/None, --api-key must be omitted (rely on cursor-agent login)."""
+    messages = [Message(role="user", content="hello")]
+
+    builder_none = CommandBuilder(model="auto", api_key=None, messages=messages)
+    cmd_none = builder_none.build()
+    assert "--api-key" not in cmd_none
+    assert "--print" in cmd_none
+    assert "hello" in cmd_none[-1]
+
+    builder_empty = CommandBuilder(model="auto", api_key="", messages=messages)
+    cmd_empty = builder_empty.build()
+    assert "--api-key" not in cmd_empty
+
 def test_system_message_merge():
     messages = [
         Message(role="system", content="You are a helper."),

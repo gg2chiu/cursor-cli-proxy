@@ -1,4 +1,6 @@
 """Models list endpoint."""
+from typing import Optional
+
 from fastapi import APIRouter, Depends
 
 from src.model_registry import model_registry
@@ -9,6 +11,6 @@ router = APIRouter()
 
 
 @router.get("/v1/models", response_model=ModelList)
-async def list_models(api_key: str = Depends(verify_auth)):
+async def list_models(api_key: Optional[str] = Depends(verify_auth)):
     """Return dynamic model list."""
     return ModelList(data=model_registry.get_models(api_key=api_key))

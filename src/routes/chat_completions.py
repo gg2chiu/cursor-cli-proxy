@@ -2,6 +2,7 @@
 import json
 import time
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -36,7 +37,7 @@ def _build_think_block(builder: CommandBuilder, session_id: str) -> str:
 @router.post("/v1/chat/completions", response_model=ChatCompletionResponse)
 async def chat_completions(
     request: ChatCompletionRequest,
-    api_key: str = Depends(verify_auth),
+    api_key: Optional[str] = Depends(verify_auth),
 ):
     logger.info(f"Received chat completion request for model: {request.model}, stream={request.stream}")
     try:

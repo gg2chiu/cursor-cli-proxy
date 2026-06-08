@@ -143,11 +143,18 @@ class CommandBuilder:
         cmd = [
             CURSOR_BIN,
             "--model", self.model,
-            "--api-key", self.api_key,
-            "--approve-mcps",
-            "--force", # "approve-mcps" has a bug. We still need the "force" option to run the MCP tools.
-            "--print",
         ]
+
+        # Only pass --api-key when we actually have one; otherwise cursor-agent
+        # falls back to its own login state (~/.config/cursor/auth.json).
+        if self.api_key:
+            cmd.extend(["--api-key", self.api_key])
+
+        cmd.extend([
+            "--approve-mcps",
+            "--force",  # "approve-mcps" has a bug. We still need the "force" option to run the MCP tools.
+            "--print",
+        ])
         
         if self.session_id:
             cmd.extend(["--resume", self.session_id])

@@ -36,7 +36,7 @@ def _build_think_summary_text(builder: CommandBuilder, session_id: str) -> str:
 @router.post("/v1/responses")
 async def create_response(
     request: ResponseCreateRequest,
-    api_key: str = Depends(verify_auth),
+    api_key: Optional[str] = Depends(verify_auth),
 ):
     model = request.model
     logger.info(f"Received responses request for model: {model}, stream={request.stream}")

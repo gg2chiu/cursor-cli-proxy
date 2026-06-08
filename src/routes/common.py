@@ -1,4 +1,5 @@
 """Shared helpers for route handlers."""
+import secrets
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -13,17 +14,26 @@ from src.slash_command_loader import SlashCommandLoader
 session_manager = SessionManager()
 
 
-async def verify_auth(authorization: str = Header(None)) -> str:
-    """Resolve API key: use CURSOR_KEY if set, otherwise require valid Bearer token."""
-    cursor_key = (config.CURSOR_KEY or "").strip().strip("'\"")
-    if cursor_key:
-        return cursor_key
+async def verify_auth(authorization: str = Header(None)) -> Optional[str]:
+    """Authenticate the client against PROXY_PASSWORD (mandatory).
+
+    The client sends PROXY_PASSWORD as the Bearer token / apiKey. On success,
+    return the API key to use for cursor-agent: CURSOR_KEY if configured,
+    otherwise None so cursor-agent falls back to its own login state.
+    """
+    proxy_password = (config.PROXY_PASSWORD or "").strip().strip("'\"")
+    if not proxy_password:
+        logger.error("PROXY_PASSWORD is not configured; rejecting request")
+        raise HTTPException(status_code=500, detail="Server misconfiguration: PROXY_PASSWORD not set")
+
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid authentication header")
     token = authorization.split(" ", 1)[1].strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing API key in Bearer token")
-    return token
+    if not token or not secrets.compare_digest(token.encode("utf-8"), proxy_password.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    cursor_key = (config.CURSOR_KEY or "").strip().strip("'\"")
+    return cursor_key or None
 
 
 @dataclass
